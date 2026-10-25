@@ -9,7 +9,119 @@ import { PRODUCTS as INITIAL_PRODUCTS } from "./products.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   // Preferencias de accesibilidad de movimiento
-  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const prefersReducedMotion = reducedMotionQuery.matches;
+  const storeHeader = document.getElementById("storeHeader");
+  const compactSearchToggles = document.querySelectorAll(".compact-search-toggle");
+  const desktopSearchInput = document.getElementById("searchInput");
+  const mobileSearchInput = document.getElementById("searchInputMobile");
+  let headerSpacer = null;
+  let headerCompact = false;
+  const headerAnimations = new Set();
+  let headerAnimationFrame = 0;
+  let headerTransitionVersion = 0;
+
+  const animateHeaderReflow = (before) => {
+    const version = ++headerTransitionVersion;
+    if (headerAnimationFrame) cancelAnimationFrame(headerAnimationFrame);
+    for (const animation of headerAnimations) animation.cancel();
+    headerAnimations.clear();
+    if (reducedMotionQuery.matches) return;
+    headerAnimationFrame = requestAnimationFrame(() => {
+      headerAnimationFrame = 0;
+      if (version !== headerTransitionVersion || reducedMotionQuery.matches) return;
+      for (const [element, rect] of before) {
+        if (!element.isConnected) continue;
+        const next = element.getBoundingClientRect();
+        if (!next.width || !next.height) continue;
+        const dx = rect.left - next.left;
+        const dy = rect.top - next.top;
+        if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue;
+        const animation = element.animate(
+          [
+            { transform: `translate(${dx}px, ${dy}px)` },
+            { transform: "translate(0, 0)" }
+          ],
+          { duration: 380, easing: "cubic-bezier(0.23, 1, 0.32, 1)" }
+        );
+        headerAnimations.add(animation);
+        animation.onfinish = () => headerAnimations.delete(animation);
+        animation.oncancel = () => headerAnimations.delete(animation);
+      }
+    });
+  };
+
+  const setHeaderCompact = (compact, animateReflow = true) => {
+    if (!storeHeader || compact === headerCompact) return;
+    const movingParts = [
+      storeHeader.querySelector("#brandHomeLink"),
+      storeHeader.querySelector('nav[aria-label="Categorías"]'),
+      storeHeader.querySelector("#desktopSearchWrap"),
+      storeHeader.querySelector("#headerActions"),
+      storeHeader.querySelector("#categorySelectMobile")
+    ].filter(Boolean);
+    const before = movingParts.map((element) => [element, element.getBoundingClientRect()]);
+
+    const expandedFlowHeight = storeHeader.getBoundingClientRect().height;
+    headerCompact = compact;
+    storeHeader.classList.toggle("is-compact", compact);
+    if (compact && !headerSpacer) {
+      headerSpacer = document.createElement("div");
+      headerSpacer.setAttribute("aria-hidden", "true");
+      headerSpacer.className = "header-flow-spacer";
+      headerSpacer.style.height = `${expandedFlowHeight}px`;
+      storeHeader.after(headerSpacer);
+    } else if (!compact && headerSpacer) {
+      headerSpacer.remove();
+      headerSpacer = null;
+    }
+
+    if (!compact && storeHeader.classList.contains("is-search-open")) {
+      storeHeader.classList.remove("is-search-open");
+      compactSearchToggles.forEach((button) => button.setAttribute("aria-expanded", "false"));
+    }
+    if (animateReflow) animateHeaderReflow(before);
+  };
+
+  let scrollFrame = 0;
+  const updateHeaderOnScroll = () => {
+    scrollFrame = 0;
+    const y = window.scrollY;
+    if (!headerCompact && y > 64) setHeaderCompact(true);
+    else if (headerCompact && y < 28) setHeaderCompact(false);
+  };
+  window.addEventListener("scroll", () => {
+    if (scrollFrame) return;
+    scrollFrame = requestAnimationFrame(updateHeaderOnScroll);
+  }, { passive: true });
+  if (window.scrollY > 64) setHeaderCompact(true, false);
+
+  compactSearchToggles.forEach((button) => {
+    button.addEventListener("click", () => {
+      if (!storeHeader) return;
+      const open = !storeHeader.classList.contains("is-search-open");
+      storeHeader.classList.toggle("is-search-open", open);
+      compactSearchToggles.forEach((toggle) => toggle.setAttribute("aria-expanded", String(open)));
+      if (open) requestAnimationFrame(() => {
+        const input = window.matchMedia("(max-width: 767px)").matches ? mobileSearchInput : desktopSearchInput;
+        input?.focus();
+      });
+    });
+  });
+  storeHeader?.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !storeHeader.classList.contains("is-search-open")) return;
+    storeHeader.classList.remove("is-search-open");
+    compactSearchToggles.forEach((button) => button.setAttribute("aria-expanded", "false"));
+  });
+  reducedMotionQuery.addEventListener("change", (event) => {
+    if (!event.matches) return;
+    headerTransitionVersion += 1;
+    if (headerAnimationFrame) cancelAnimationFrame(headerAnimationFrame);
+    headerAnimationFrame = 0;
+    headerAnimations.forEach((animation) => animation.cancel());
+    headerAnimations.clear();
+  });
+
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   }[character]));

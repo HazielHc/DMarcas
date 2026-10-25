@@ -9,10 +9,6 @@
   <link rel="icon" type="image/png" href="assets/logo.png" />
 
   <!-- Tipografía editorial y funcional: Playfair Display + Inter -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet" />
-
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
@@ -22,7 +18,7 @@
 <body class="bg-[#faf8f5] text-neutral-900 font-sans antialiased min-h-screen flex flex-col selection:bg-neutral-900 selection:text-white">
 
   <!-- ================= BARRA SUPERIOR DE ANUNCIOS ================= -->
-  <aside class="hidden md:block bg-brand-black text-neutral-300 text-xs py-2 border-b border-neutral-800">
+  <aside class="block bg-brand-black text-neutral-300 text-[10px] sm:text-xs py-2 border-b border-neutral-800">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap justify-between items-center gap-2">
       <div class="flex items-center gap-2 tracking-wide font-medium">
         <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -32,18 +28,18 @@
   </aside>
 
   <!-- ================= HEADER PRINCIPAL ================= -->
-  <header class="bg-white sticky top-0 z-40 border-b border-neutral-200 shadow-sm transition-all">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <header id="storeHeader" class="store-header bg-white sticky top-0 z-40 border-b border-neutral-200 shadow-sm">
+    <div id="headerInner" class="header-inner max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       
       <!-- Fila Superior: Marca, Buscador y Acciones -->
-      <div class="flex items-center justify-between h-16 md:h-20 gap-2 md:gap-4">
+      <div id="headerMainRow" class="header-main-row flex items-center justify-between h-16 md:h-20 gap-2 md:gap-4">
         
         <!-- Logotipo y Nombre Oficial (Tamaño estrictamente controlado) -->
         <a href="index.html" class="flex items-center gap-2 md:gap-3.5 group select-none shrink-0 min-w-0" id="brandHomeLink" title="Ir al inicio de Diversas Marcas">
           <div class="brand-logo-frame">
             <img src="assets/logo.png" alt="Diversas Marcas Logo" />
           </div>
-          <div class="flex flex-col">
+          <div class="brand-copy flex flex-col">
             <span class="font-display font-black text-base md:text-xl tracking-[0.04em] md:tracking-[0.08em] text-neutral-950 leading-none">
               Diversas Marcas
             </span>
@@ -54,23 +50,29 @@
         </a>
 
         <!-- Buscador de escritorio -->
-        <div class="hidden md:flex flex-1 max-w-lg mx-6">
+        <div id="desktopSearchWrap" class="header-search-desktop hidden md:flex flex-1 max-w-lg mx-6">
           <div class="relative w-full">
             <label class="sr-only" for="searchInput">Buscar en el catálogo</label>
             <input 
               type="search" 
               id="searchInput" 
-              class="min-h-[44px] w-full pl-9 pr-4 py-2 border border-neutral-300 rounded text-sm tracking-wide text-neutral-900 placeholder:text-neutral-500 focus:outline-none focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950 transition-all bg-neutral-50/60" 
+              class="min-h-[44px] w-full pl-9 pr-4 py-2 border border-neutral-300 rounded text-sm tracking-wide text-neutral-900 placeholder:text-neutral-500 focus:outline-none focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950 transition-colors bg-neutral-50/60"
               placeholder="Buscar perfumes, tenis, ropa o marcas..." 
               autocomplete="off" 
             />
             <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 text-xs"></i>
           </div>
+          <button class="compact-search-toggle" type="button" aria-label="Abrir búsqueda" aria-controls="searchInput" aria-expanded="false">
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+          </button>
         </div>
 
         <!-- Acceso a la bolsa -->
-        <div class="flex items-center gap-3 shrink-0">
-          <button class="min-h-[44px] min-w-[44px] flex items-center gap-2 px-3.5 py-2 rounded-md border border-neutral-300 bg-white hover:border-neutral-950 text-neutral-900 text-xs font-display font-bold uppercase tracking-wider transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950" id="openCartBtn" title="Ver mi bolsa de pedido" aria-haspopup="dialog" aria-controls="cartDrawerOverlay" aria-expanded="false">
+        <div id="headerActions" class="header-actions flex items-center gap-3 shrink-0">
+          <button class="compact-search-toggle mobile-search-toggle" type="button" aria-label="Abrir búsqueda" aria-controls="searchInputMobile" aria-expanded="false">
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+          </button>
+          <button class="min-h-[44px] min-w-[44px] flex items-center gap-2 px-3.5 py-2 rounded-md border border-neutral-300 bg-white hover:border-neutral-950 text-neutral-900 text-xs font-display font-bold uppercase tracking-wider transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950" id="openCartBtn" title="Ver mi bolsa de pedido" aria-haspopup="dialog" aria-controls="cartDrawerOverlay" aria-expanded="false">
             <i class="fa-solid fa-bag-shopping text-sm text-neutral-700"></i>
             <span class="hidden sm:inline">Bolsa</span>
             <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-[10px] font-black bg-neutral-950 text-white min-w-[18px]" id="cartBadge" aria-live="polite" aria-atomic="true" aria-label="0 artículos en la bolsa">0</span>
@@ -79,13 +81,13 @@
       </div>
 
       <!-- Buscador móvil en pantalla pequeña -->
-      <div class="pb-3 md:hidden">
+      <div id="mobileSearchWrap" class="header-search-mobile pb-3 md:hidden">
         <div class="relative w-full">
           <label class="sr-only" for="searchInputMobile">Buscar en el catálogo</label>
           <input 
             type="search" 
             id="searchInputMobile" 
-            class="min-h-[44px] w-full pl-9 pr-4 py-2 border border-neutral-300 rounded text-sm tracking-wide text-neutral-900 placeholder:text-neutral-500 focus:outline-none focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950 transition-all bg-white" 
+              class="min-h-[44px] w-full pl-9 pr-4 py-2 border border-neutral-300 rounded text-sm tracking-wide text-neutral-900 placeholder:text-neutral-500 focus:outline-none focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950 transition-colors bg-white"
             placeholder="Buscar perfumes, tenis, ropa o marcas..." 
             autocomplete="off" 
           />
@@ -95,7 +97,7 @@
 
       <!-- Barra de navegación por categorías -->
       <label class="sr-only" for="categorySelectMobile">Filtrar por categoría</label>
-      <select id="categorySelectMobile" class="md:hidden mb-2 min-h-[44px] w-full rounded-md border border-neutral-300 bg-white px-3 text-sm font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950">
+      <select id="categorySelectMobile" class="md:hidden mb-2 min-h-[45px] w-full rounded-md border border-neutral-300 bg-white px-3 text-sm font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950">
         <option value="all">Todas las categorías</option>
         <option value="Perfumes">Perfumes</option><option value="Calzado">Calzado</option>
         <option value="Ropa">Ropa</option><option value="Accesorios">Accesorios y lentes</option>
