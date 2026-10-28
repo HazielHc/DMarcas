@@ -785,10 +785,38 @@ input[type="checkbox"] { border-radius: var(--ui-radius-pill); }
   margin-top: 0;
 }
 .admin-row-actions .admin-button { min-width: 0; min-height: 44px; padding-inline: 10px; }
+.admin-delete-confirm {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #e8c9c5;
+  border-radius: 16px;
+  background: #fff7f6;
+}
+.admin-delete-confirm p {
+  margin: 0;
+  color: #64231e;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.admin-delete-confirm .admin-button {
+  min-width: 0;
+  min-height: 44px;
+  padding-inline: 12px;
+  line-height: 1.25;
+}
 @media (max-width: 620px) {
   .admin-product-list { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .admin-product-row { max-width: 400px; grid-template-columns: 88px minmax(0, 1fr); gap: 8px 12px; }
   .admin-product-image { width: 88px; }
+  .admin-delete-confirm { grid-template-columns: minmax(0, 1fr) minmax(0, .85fr); }
+  .admin-delete-confirm p { grid-column: 1 / -1; }
+  .admin-delete-confirm .admin-button { padding-inline: 8px; white-space: normal; }
 }
 
 /* Header de tienda: un mismo logo y controles pasan a una barra compacta. */

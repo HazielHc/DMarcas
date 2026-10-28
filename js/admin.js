@@ -105,6 +105,7 @@ const imageFiles = $("#adminImageFiles");
 const imageStatus = $("#adminImageStatus");
 const categoryFields = $("#adminCategoryFields");
 let productCache = [];
+let pendingDeleteId = null;
 let imageEntries = [];
 let editingId = null;
 let categoryDrafts = {};
@@ -223,7 +224,13 @@ const renderProducts = (query = "") => {
     <article class="admin-product-row" data-product-id="${escapeHtml(product.id)}">
       <div class="admin-product-image">${productImagePath(product) ? `<img src="${escapeHtml(productImagePath(product))}" alt="${escapeHtml(product.name)}" loading="lazy" />` : `<span aria-hidden="true">DM</span>`}</div>
       <div class="admin-product-info"><h3>${escapeHtml(product.name)}</h3><p>${escapeHtml(product.brand)} · ${escapeHtml(product.category)}</p><strong>${money(product.offerPrice)}</strong>${product.onSale ? `<span class="admin-sale-price"> Antes ${money(product.regularPrice)}</span>` : ""}</div>
-      <div class="admin-row-actions"><button class="admin-button admin-button-quiet" type="button" data-action="edit" data-id="${escapeHtml(product.id)}">Editar</button><button class="admin-button admin-button-danger" type="button" data-action="delete" data-id="${escapeHtml(product.id)}">Eliminar</button></div>
+      ${pendingDeleteId === product.id ? `
+        <div class="admin-delete-confirm" role="group" aria-label="Confirmar eliminación de ${escapeHtml(product.name)}">
+          <p>¿Eliminar este producto del catálogo?</p>
+          <button class="admin-button admin-button-danger" type="button" data-action="confirm-delete" data-id="${escapeHtml(product.id)}">Confirmar eliminación</button>
+          <button class="admin-button admin-button-quiet" type="button" data-action="cancel-delete" data-id="${escapeHtml(product.id)}">Cancelar</button>
+        </div>` : `
+        <div class="admin-row-actions"><button class="admin-button admin-button-quiet" type="button" data-action="edit" data-id="${escapeHtml(product.id)}">Editar</button><button class="admin-button admin-button-danger" type="button" data-action="delete" data-id="${escapeHtml(product.id)}">Eliminar</button></div>`}
     </article>`).join("");
 };
 
@@ -412,7 +419,7 @@ uploadControl.addEventListener("drop", (event) => {
   imageFiles.files = transfer.files;
   imageFiles.dispatchEvent(new Event("change", { bubbles: true }));
 });
-$("#adminSearch").addEventListener("input", (event) => renderProducts(event.target.value));
+$("#adminSearch").addEventListener("input", (event) => { pendingDeleteId = null; renderProducts(event.target.value); });
 $("#adminClose").addEventListener("click", closeAdmin);
 $("#adminFormClose").addEventListener("click", () => productDialog.close());
 $("#adminCancelForm").addEventListener("click", () => productDialog.close());
@@ -432,16 +439,33 @@ productList.addEventListener("click", async (event) => {
     openProductForm(product);
     return;
   }
-  if (button.dataset.action === "delete" && window.confirm(`¿Eliminar “${product.name}” del catálogo?`)) {
+  if (button.dataset.action === "delete") {
+    pendingDeleteId = product.id;
+    showMessage("");
+    renderProducts($("#adminSearch").value);
+    productList.querySelector(`[data-product-id="${CSS.escape(product.id)}"] [data-action="confirm-delete"]`)?.focus();
+    return;
+  }
+  if (button.dataset.action === "cancel-delete") {
+    pendingDeleteId = null;
+    renderProducts($("#adminSearch").value);
+    productList.querySelector(`[data-product-id="${CSS.escape(product.id)}"] [data-action="delete"]`)?.focus();
+    return;
+  }
+  if (button.dataset.action === "confirm-delete" && pendingDeleteId === product.id) {
     button.disabled = true;
+    const cancelButton = productList.querySelector(`[data-product-id="${CSS.escape(product.id)}"] [data-action="cancel-delete"]`);
+    if (cancelButton) cancelButton.disabled = true;
     try {
       await adminFetch(`/api/admin/products/${encodeURIComponent(product.id)}`, { method: "DELETE" });
+      pendingDeleteId = null;
       await refreshProducts();
       window.dispatchEvent(new CustomEvent("catalog:updated"));
       showMessage("Producto eliminado.");
     } catch (error) {
       showMessage(error.message, true);
       button.disabled = false;
+      if (cancelButton) cancelButton.disabled = false;
     }
   }
 });
