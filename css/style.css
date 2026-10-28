@@ -702,6 +702,7 @@ input[type="checkbox"] { border-radius: var(--ui-radius-pill); }
 .admin-disclosures summary::after { content: "+"; flex: none; font-size: 26px; }
 .admin-disclosures details[open] summary::after { content: "−"; }
 .admin-disclosures details p { margin: 0; padding: 0 40px 20px 0; color: #4f4d49; line-height: 1.6; }
+.admin-product-dialog,.admin-category-dialog { position: fixed; inset: 50% auto auto 50%; margin: 0; translate: -50% -50%; }
 .admin-product-dialog { width: min(1000px,calc(100% - 24px)); max-width: none; max-height: 92dvh; padding: 0; border: 1px solid #e8e2d8; border-radius: 16px; background: #faf7f2; color: #0b0c10; }
 .admin-category-dialog { width: min(560px,calc(100% - 24px)); max-width: none; max-height: min(88dvh,760px); padding: 0; overflow: auto; border: 1px solid #d9cfbc; border-radius: 20px; background: #faf7f2; color: #0b0c10; box-shadow: 0 24px 80px rgb(0 0 0 / .24); }
 .admin-category-dialog::backdrop { background: rgb(11 12 16 / .72); }
