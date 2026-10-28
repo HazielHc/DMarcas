@@ -810,13 +810,48 @@ input[type="checkbox"] { border-radius: var(--ui-radius-pill); }
   padding-inline: 12px;
   line-height: 1.25;
 }
+.admin-product-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 30px;
+}
+.admin-product-group { min-width: 0; }
+.admin-product-group-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ded8cf;
+}
+.admin-product-group-heading h3 {
+  margin: 0;
+  color: #111214;
+  font-size: 23px;
+  font-weight: 650;
+  letter-spacing: -.025em;
+}
+.admin-product-group-heading span {
+  flex: none;
+  color: #5d5952;
+  font-size: 13px;
+}
+.admin-product-group-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 400px));
+  align-items: start;
+  gap: 16px;
+}
 @media (max-width: 620px) {
-  .admin-product-list { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .admin-product-list { gap: 24px; }
   .admin-product-row { max-width: 400px; grid-template-columns: 88px minmax(0, 1fr); gap: 8px 12px; }
   .admin-product-image { width: 88px; }
   .admin-delete-confirm { grid-template-columns: minmax(0, 1fr) minmax(0, .85fr); }
   .admin-delete-confirm p { grid-column: 1 / -1; }
   .admin-delete-confirm .admin-button { padding-inline: 8px; white-space: normal; }
+  .admin-product-group-heading h3 { font-size: 21px; }
+  .admin-product-group-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
 }
 
 /* Header de tienda: un mismo logo y controles pasan a una barra compacta. */

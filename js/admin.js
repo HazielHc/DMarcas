@@ -210,6 +210,19 @@ const refreshProducts = async () => {
   renderProducts($("#adminSearch").value);
 };
 
+const normalizeCategoryText = (value) => String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-MX").trim();
+
+const productAdminSection = (product) => {
+  const category = normalizeCategoryText(product.category);
+  const lensTerms = normalizeCategoryText(`${product.details?.type ?? ""} ${product.name}`);
+  if (category === "perfumes") return "perfumes";
+  if (category === "calzado") return "calzado";
+  if (category === "ropa") return "ropa";
+  if (category === "lentes" || (category === "accesorios" && /\blentes?\b/.test(lensTerms))) return "lentes";
+  if (category === "accesorios") return "accesorios";
+  return "otros";
+};
+
 const renderProducts = (query = "") => {
   const normalizedQuery = query.trim().toLocaleLowerCase("es-MX");
   const visibleProducts = productCache.filter((product) =>
@@ -220,7 +233,21 @@ const renderProducts = (query = "") => {
     productList.innerHTML = `<p class="admin-empty">No hay productos que coincidan con esa búsqueda.</p>`;
     return;
   }
-  productList.innerHTML = visibleProducts.map((product) => `
+  const sectionOrder = [
+    ["perfumes", "Perfumes"],
+    ["calzado", "Calzado"],
+    ["lentes", "Lentes"],
+    ["ropa", "Ropa"],
+    ["accesorios", "Accesorios"],
+    ["otros", "Otros productos"]
+  ];
+  const sections = sectionOrder.map(([key, title]) => ({
+    key,
+    title,
+    products: visibleProducts.filter((product) => productAdminSection(product) === key)
+  })).filter((section) => section.products.length > 0);
+
+  const renderProductCard = (product) => `
     <article class="admin-product-row" data-product-id="${escapeHtml(product.id)}">
       <div class="admin-product-image">${productImagePath(product) ? `<img src="${escapeHtml(productImagePath(product))}" alt="${escapeHtml(product.name)}" loading="lazy" />` : `<span aria-hidden="true">DM</span>`}</div>
       <div class="admin-product-info"><h3>${escapeHtml(product.name)}</h3><p>${escapeHtml(product.brand)} · ${escapeHtml(product.category)}</p><strong>${money(product.offerPrice)}</strong>${product.onSale ? `<span class="admin-sale-price"> Antes ${money(product.regularPrice)}</span>` : ""}</div>
@@ -231,7 +258,16 @@ const renderProducts = (query = "") => {
           <button class="admin-button admin-button-quiet" type="button" data-action="cancel-delete" data-id="${escapeHtml(product.id)}">Cancelar</button>
         </div>` : `
         <div class="admin-row-actions"><button class="admin-button admin-button-quiet" type="button" data-action="edit" data-id="${escapeHtml(product.id)}">Editar</button><button class="admin-button admin-button-danger" type="button" data-action="delete" data-id="${escapeHtml(product.id)}">Eliminar</button></div>`}
-    </article>`).join("");
+    </article>`;
+
+  productList.innerHTML = sections.map((section) => `
+    <section class="admin-product-group" aria-labelledby="admin-product-group-${section.key}">
+      <header class="admin-product-group-heading">
+        <h3 id="admin-product-group-${section.key}">${section.title}</h3>
+        <span>${section.products.length} ${section.products.length === 1 ? "producto" : "productos"}</span>
+      </header>
+      <div class="admin-product-group-grid">${section.products.map(renderProductCard).join("")}</div>
+    </section>`).join("");
 };
 
 const openProductForm = (product = null) => {
