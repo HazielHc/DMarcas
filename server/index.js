@@ -47,7 +47,7 @@ app.use(helmet({
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "data:"],
-      imgSrc: ["'self'", "https:", "data:"],
+      imgSrc: ["'self'", "https:", "data:", "blob:"],
       connectSrc: ["'self'"],
       ...(isProduction ? { upgradeInsecureRequests: [] } : {})
     }
