@@ -70,30 +70,47 @@ adminOverlay.innerHTML = `
     <dialog class="admin-product-dialog" id="adminProductDialog" aria-labelledby="adminFormTitle">
       <form class="admin-product-form" id="adminProductForm">
         <header class="admin-form-header">
-          <div><p class="admin-eyebrow">Detalle del producto</p><h3 id="adminFormTitle">Agregar producto</h3></div>
+          <div><p class="admin-eyebrow" id="adminFormEyebrow">Nuevo producto</p><h3 id="adminFormTitle">Agregar producto</h3><p class="admin-form-subtitle">Completa los datos principales y revisa los detalles antes de guardar.</p></div>
           <button class="admin-close admin-form-close" type="button" id="adminFormClose" aria-label="Cerrar formulario">×</button>
         </header>
-        <div class="admin-form-grid">
-          <div class="admin-form-section-label admin-field-wide"><h4>Información del producto</h4><p>Estos datos identifican el artículo en la tarjeta y en su ficha de detalle.</p></div>
-          <label class="admin-field admin-field-wide">Nombre del producto<input class="admin-input" name="name" required maxlength="160" placeholder="Ej. Sauvage Extrait" /></label>
-          <label class="admin-field">Marca<input class="admin-input" name="brand" required maxlength="100" /></label>
-          <label class="admin-field">Categor?a<select class="admin-input" name="category" required><option value="">Elige una categor?a</option><option>Perfumes</option><option>Ropa</option><option>Calzado</option><option>Accesorios</option></select></label>
-          <div class="admin-form-section-label admin-field-wide"><h4>Precio y disponibilidad</h4><p>El precio de venta se muestra en la tienda; al activar “En oferta” también aparece el precio regular.</p></div>
-          <label class="admin-field">Precio regular (MXN)<input class="admin-input" name="regularPrice" type="number" min="1" step="0.01" required /></label>
-          <label class="admin-field">Precio de venta (MXN)<input class="admin-input" name="offerPrice" type="number" min="1" step="0.01" required /></label>
-          <label class="admin-field">Público o género<input class="admin-input" name="gender" maxlength="40" placeholder="Unisex, Mujer, Hombre…" /></label>
-          <label class="admin-field">Disponibilidad<input class="admin-input" name="stockStatus" list="adminStockOptions" maxlength="80" placeholder="En stock" /><datalist id="adminStockOptions"><option value="En stock"><option value="Últimas unidades"><option value="Agotado"></datalist><span class="admin-field-help">Se muestra en los detalles. Escribe “Agotado” o “Sin stock” para indicar que no está disponible.</span></label>
-          <div class="admin-form-section-label admin-field-wide"><h4>Fotografías y variantes</h4><p>La primera foto será la portada y la imagen desde la que se abre el detalle.</p></div>
-          <div class="admin-field admin-field-wide admin-upload-field"><span class="admin-field-label">Fotograf&#237;as del producto</span><label class="admin-upload-control" for="adminImageFiles"><span class="admin-upload-action">Seleccionar fotograf&#237;as</span><span>o arr&#225;stralas aqu&#237;</span><input id="adminImageFiles" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple /></label><span class="admin-field-help" id="adminImageHelp">Hasta 12 im&#225;genes JPG, PNG, WebP o GIF, m&#225;ximo 8 MB cada una. Se guardan en <code>product-images</code> dentro de <code>DATA_DIR</code> (por defecto, <code>data/product-images</code>).</span><p class="admin-image-status" id="adminImageStatus" role="status" aria-live="polite"></p><div class="admin-image-preview" id="adminImagePreview" aria-live="polite"></div></div>
-          <div class="admin-field admin-field-wide" id="adminCategoryFields" hidden></div>
-          <input type="hidden" name="categoryDetails" value="{}" />
-          <label class="admin-field">Tallas o presentaciones (una por línea)<textarea class="admin-input admin-textarea" name="sizes" rows="3" placeholder="100 ml&#10;150 ml"></textarea><span class="admin-field-help">Se convierten en opciones seleccionables dentro de la ficha.</span></label>
-          <label class="admin-field">Colores (Nombre | #HEX, uno por línea)<textarea class="admin-input admin-textarea" name="colors" rows="3" placeholder="Negro | #111827"></textarea></label>
-          <div class="admin-form-section-label admin-field-wide"><h4>Información de detalle</h4><p>Describe lo que el cliente necesita saber antes de pedir o agregar a su bolsa.</p></div>
-          <label class="admin-field admin-field-wide">Descripción<textarea class="admin-input admin-textarea" name="description" rows="3" maxlength="2000" placeholder="Describe el producto con información útil y concreta."></textarea></label>
-          <label class="admin-field admin-field-wide">Características (una por línea)<textarea class="admin-input admin-textarea" name="features" rows="3" maxlength="3000" placeholder="Contenido: 100 ml&#10;Acabado: mate"></textarea></label>
+        <div class="admin-form-sections">
+          <section class="admin-form-section" aria-labelledby="adminIdentityTitle">
+            <header class="admin-form-section-heading"><span>01</span><div><h4 id="adminIdentityTitle">Identidad e imágenes</h4><p>Lo que el cliente verá primero en el catálogo.</p></div></header>
+            <div class="admin-form-grid">
+              <label class="admin-field admin-field-wide">Nombre del producto<input class="admin-input" name="name" required maxlength="160" placeholder="Ej. Sauvage Eau de Parfum" /></label>
+              <label class="admin-field">Marca<input class="admin-input" name="brand" required maxlength="100" placeholder="Ej. Dior" /></label>
+              <label class="admin-field admin-category-edit-field">Sección<select class="admin-input" name="category" required><option value="">Elige una sección</option><option>Perfumes</option><option>Ropa</option><option>Calzado</option><option>Accesorios</option></select></label>
+              <div class="admin-field admin-category-static" hidden><span>Sección</span><span class="admin-category-static-value" id="adminCategoryStaticValue"></span></div>
+              <div class="admin-field admin-field-wide admin-upload-field"><span class="admin-field-label">Fotografías del producto</span><label class="admin-upload-control" for="adminImageFiles"><span class="admin-upload-action">Seleccionar fotos</span><span>o arrástralas aquí</span><input id="adminImageFiles" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple /></label><span class="admin-field-help" id="adminImageHelp">Hasta 12 imágenes JPG, PNG, WebP o GIF; máximo 8 MB cada una. La primera será la portada.</span><p class="admin-image-status" id="adminImageStatus" role="status" aria-live="polite"></p><div class="admin-image-preview" id="adminImagePreview" aria-live="polite"></div></div>
+            </div>
+          </section>
+          <section class="admin-form-section" aria-labelledby="adminAttributesTitle">
+            <header class="admin-form-section-heading"><span>02</span><div><h4 id="adminAttributesTitle">Aroma y presentación</h4><p id="adminAttributesDescription">Define la fragancia y los tamaños disponibles.</p></div></header>
+            <div class="admin-form-grid">
+              <div class="admin-field admin-field-wide" id="adminCategoryFields" hidden></div>
+              <input type="hidden" name="categoryDetails" value="{}" />
+              <label class="admin-field">Presentaciones<textarea class="admin-input admin-textarea" name="sizes" rows="2" placeholder="100 ml&#10;150 ml"></textarea><span class="admin-field-help">Una por línea; se muestran como opciones en el detalle.</span></label>
+              <label class="admin-field">Colores<textarea class="admin-input admin-textarea" name="colors" rows="2" placeholder="Negro | #111827"></textarea><span class="admin-field-help">Usa Nombre | #HEX, uno por línea.</span></label>
+            </div>
+          </section>
+          <section class="admin-form-section" aria-labelledby="adminPriceTitle">
+            <header class="admin-form-section-heading"><span>03</span><div><h4 id="adminPriceTitle">Precio y disponibilidad</h4><p>El precio de venta no puede superar el precio regular.</p></div></header>
+            <div class="admin-form-grid">
+              <label class="admin-field">Precio regular (MXN)<input class="admin-input" name="regularPrice" type="number" min="1" step="0.01" required placeholder="$0.00" /></label>
+              <label class="admin-field">Precio de venta (MXN)<input class="admin-input" name="offerPrice" type="number" min="1" step="0.01" required placeholder="$0.00" /></label>
+              <label class="admin-field">Público o género<input class="admin-input" name="gender" maxlength="40" placeholder="Unisex, mujer, hombre…" /></label>
+              <label class="admin-field">Disponibilidad<input class="admin-input" name="stockStatus" list="adminStockOptions" maxlength="80" placeholder="En stock" /><datalist id="adminStockOptions"><option value="En stock"><option value="Últimas unidades"><option value="Agotado"></datalist><span class="admin-field-help">Se muestra en los detalles del producto.</span></label>
+            </div>
+          </section>
+          <section class="admin-form-section" aria-labelledby="adminDetailTitle">
+            <header class="admin-form-section-heading"><span>04</span><div><h4 id="adminDetailTitle">Información para el cliente</h4><p>Responde dudas frecuentes antes de que te contacten.</p></div></header>
+            <div class="admin-form-grid">
+              <label class="admin-field admin-field-wide">Descripción<textarea class="admin-input admin-textarea" name="description" rows="3" maxlength="2000" placeholder="Describe el aroma, duración o presentación con información útil."></textarea></label>
+              <label class="admin-field admin-field-wide">Características<textarea class="admin-input admin-textarea" name="features" rows="2" maxlength="3000" placeholder="Familia: amaderada&#10;Contenido: 100 ml"></textarea><span class="admin-field-help">Una característica por línea.</span></label>
+            </div>
+          </section>
         </div>
-        <fieldset class="admin-flags"><legend>Mostrar en el catálogo</legend>
+        <fieldset class="admin-flags"><legend>Visibilidad en el catálogo</legend>
           <label><input type="checkbox" name="onSale" /> En oferta</label>
           <label><input type="checkbox" name="isNew" /> Nuevo ingreso</label>
           <label><input type="checkbox" name="featured" /> Destacado <span class="admin-flag-help">Muestra “Selección DM” en la foto.</span></label>
@@ -206,6 +223,7 @@ const openAdmin = async () => {
 };
 
 const closeAdmin = () => {
+  if (categoryDialog.open) categoryDialog.close();
   if (productDialog.open) productDialog.close();
   adminOverlay.hidden = true;
   adminOverlay.setAttribute("aria-hidden", "true");
@@ -297,13 +315,14 @@ const renderProducts = (query = "") => {
     </section>`).join("");
 };
 
-const openProductForm = (product = null) => {
+const openProductForm = (product = null, selectedCategory = "") => {
   editingId = product?.id ?? null;
   productForm.reset();
   $("#adminFormTitle").textContent = editingId ? "Editar producto" : "Agregar producto";
+  $("#adminFormEyebrow").textContent = editingId ? `Editar · ${product.category}` : `Nuevo producto · ${product?.category || selectedCategory || "Catálogo"}`;
   $("#adminSaveProduct").textContent = editingId ? "Guardar cambios" : "Guardar producto";
   const fields = productForm.elements;
-  activeCategory = product?.category ?? "";
+  activeCategory = product?.category ?? selectedCategory;
   categoryDrafts = activeCategory ? { [activeCategory]: { ...(product?.details ?? {}) } } : {};
   imageEntries.forEach((entry) => { if (entry.objectUrl) URL.revokeObjectURL(entry.objectUrl); });
   imageEntries = (product?.images ?? []).map((src) => ({ src: productImagePath(product, src), existing: true }));
@@ -311,7 +330,10 @@ const openProductForm = (product = null) => {
   imageStatus.textContent = "";
   fields.name.value = product?.name ?? "";
   fields.brand.value = product?.brand ?? "";
-  fields.category.value = product?.category ?? "";
+  fields.category.value = product?.category ?? selectedCategory;
+  $(".admin-category-edit-field").hidden = !editingId;
+  $(".admin-category-static").hidden = Boolean(editingId);
+  $("#adminCategoryStaticValue").textContent = fields.category.value;
   fields.regularPrice.value = product?.regularPrice ?? "";
   fields.offerPrice.value = product?.offerPrice ?? "";
   fields.gender.value = product?.gender ?? "";
@@ -324,10 +346,27 @@ const openProductForm = (product = null) => {
   fields.onSale.checked = product?.onSale ?? false;
   fields.isNew.checked = product?.isNew ?? false;
   fields.featured.checked = product?.featured ?? false;
+  updateCategorySectionLabel(fields.category.value);
   renderCategoryFields(product?.details ?? {});
   renderImagePreviews();
   productDialog.showModal();
   fields.name.focus();
+};
+
+const updateCategorySectionLabel = (category) => {
+  const labels = {
+    Perfumes: ["Aroma y presentación", "Define la fragancia y los tamaños disponibles."],
+    Calzado: ["Tallas y materiales", "Indica el tipo de calzado y sus variantes."],
+    Lentes: ["Detalles de los lentes", "Especifica el estilo y los materiales."],
+    Accesorios: ["Detalles del accesorio", "Indica el tipo y las variantes disponibles."],
+    Ropa: ["Tallas y materiales", "Indica el tipo de prenda y sus variantes."],
+    Otros: ["Detalles del producto", "Agrega el tipo y las variantes disponibles."]
+  };
+  const [title, description] = labels[category] || ["Detalles del producto", `Especifica los atributos de ${category.toLocaleLowerCase("es-MX") || "este producto"}.`];
+  $("#adminAttributesTitle").textContent = title;
+  $("#adminAttributesDescription").textContent = description;
+  if (!editingId) $("#adminFormEyebrow").textContent = `Nuevo producto · ${category || "Catálogo"}`;
+  else $("#adminFormEyebrow").textContent = `Editar · ${category}`;
 };
 
 const categoryIcon = (category) => {
@@ -371,9 +410,7 @@ const transitionToProductForm = async (category) => {
     await picker.animate([{ opacity: 1, transform: "translateY(0) scale(1)" }, { opacity: 0, transform: "translateY(8px) scale(.985)" }], { duration: 160, easing: "cubic-bezier(0.23, 1, 0.32, 1)" }).finished.catch(() => {});
   }
   categoryDialog.close();
-  openProductForm();
-  productForm.elements.category.value = category;
-  activeCategory = category;
+  openProductForm(null, category);
   renderCategoryFields({}, true);
   productForm.elements.name.focus();
 };
@@ -505,6 +542,7 @@ $("#adminProductsLink").addEventListener("click", () => { $("#adminWorkspace").s
 productForm.elements.category.addEventListener("change", () => {
   if (activeCategory) categoryDrafts[activeCategory] = JSON.parse(productForm.elements.categoryDetails.value || "{}");
   activeCategory = productForm.elements.category.value;
+  updateCategorySectionLabel(activeCategory);
   renderCategoryFields(categoryDrafts[activeCategory] || {}, true);
 });
 imageFiles.addEventListener("change", () => {
@@ -673,7 +711,7 @@ document.addEventListener("keydown", (event) => {
     openAdmin();
     return;
   }
-  if (!adminOverlay.hidden && event.key === "Escape" && !productDialog.open) closeAdmin();
+  if (!adminOverlay.hidden && event.key === "Escape" && !productDialog.open && !categoryDialog.open) closeAdmin();
 });
 
 adminOverlay.addEventListener("click", (event) => {
