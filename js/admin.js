@@ -51,6 +51,22 @@ adminOverlay.innerHTML = `
     </div>
     </main>
 
+    <dialog class="admin-category-dialog" id="adminCategoryDialog" aria-labelledby="adminCategoryTitle">
+      <section class="admin-category-picker" aria-live="polite">
+        <header class="admin-form-header">
+          <div><p class="admin-eyebrow">Nuevo producto · Paso 1 de 2</p><h3 id="adminCategoryTitle">Elige una sección</h3></div>
+          <button class="admin-close admin-form-close" type="button" id="adminCategoryClose" aria-label="Cerrar selección">×</button>
+        </header>
+        <p class="admin-category-intro">Organiza el producto en el catálogo.</p>
+        <div class="admin-category-choices" id="adminCategoryChoices"></div>
+        <form class="admin-new-category-form" id="adminNewCategoryForm" hidden>
+          <label class="admin-field" for="adminNewCategoryName">Nombre de la nueva sección<input class="admin-input" id="adminNewCategoryName" name="name" maxlength="50" required placeholder="Ej. Relojes" /></label>
+          <div class="admin-category-create-actions"><button class="admin-button admin-button-quiet" type="button" id="adminCancelNewCategory">Cancelar</button><button class="admin-button admin-button-primary" type="submit" id="adminSaveNewCategory">Crear sección</button></div>
+        </form>
+        <button class="admin-category-add" type="button" id="adminShowNewCategory"><span aria-hidden="true">+</span> Crear nueva sección</button>
+      </section>
+    </dialog>
+
     <dialog class="admin-product-dialog" id="adminProductDialog" aria-labelledby="adminFormTitle">
       <form class="admin-product-form" id="adminProductForm">
         <header class="admin-form-header">
@@ -98,6 +114,8 @@ const adminWorkspace = $("#adminWorkspace");
 const adminMessage = $("#adminMessage");
 const productList = $("#adminProductList");
 const productDialog = $("#adminProductDialog");
+const categoryDialog = $("#adminCategoryDialog");
+const categoryChoices = $("#adminCategoryChoices");
 const productForm = $("#adminProductForm");
 const adminNav = $(".admin-nav");
 const imagePreview = $("#adminImagePreview");
@@ -105,6 +123,7 @@ const imageFiles = $("#adminImageFiles");
 const imageStatus = $("#adminImageStatus");
 const categoryFields = $("#adminCategoryFields");
 let productCache = [];
+let categoryCache = ["Perfumes", "Calzado", "Lentes", "Ropa", "Accesorios", "Otros"];
 let pendingDeleteId = null;
 let imageEntries = [];
 let editingId = null;
@@ -207,6 +226,8 @@ const showWorkspace = async () => {
 
 const refreshProducts = async () => {
   productCache = await adminFetch("/api/products");
+  try { categoryCache = await adminFetch("/api/admin/categories"); } catch { /* La sesión expirada se informa al guardar. */ }
+  syncProductCategoryOptions();
   renderProducts($("#adminSearch").value);
 };
 
@@ -220,7 +241,8 @@ const productAdminSection = (product) => {
   if (category === "ropa") return "ropa";
   if (category === "lentes" || (category === "accesorios" && /\blentes?\b/.test(lensTerms))) return "lentes";
   if (category === "accesorios") return "accesorios";
-  return "otros";
+  if (category === "otros" || category === "otros productos") return "otros";
+  return `custom:${category}`;
 };
 
 const renderProducts = (query = "") => {
@@ -241,6 +263,11 @@ const renderProducts = (query = "") => {
     ["accesorios", "Accesorios"],
     ["otros", "Otros productos"]
   ];
+  const customSections = [...new Map(visibleProducts
+    .filter((product) => productAdminSection(product).startsWith("custom:"))
+    .map((product) => [normalizeCategoryText(product.category), product.category])).entries()]
+    .map(([key, title]) => [`custom:${key}`, title]);
+  sectionOrder.push(...customSections);
   const sections = sectionOrder.map(([key, title]) => ({
     key,
     title,
@@ -260,10 +287,10 @@ const renderProducts = (query = "") => {
         <div class="admin-row-actions"><button class="admin-button admin-button-quiet" type="button" data-action="edit" data-id="${escapeHtml(product.id)}">Editar</button><button class="admin-button admin-button-danger" type="button" data-action="delete" data-id="${escapeHtml(product.id)}">Eliminar</button></div>`}
     </article>`;
 
-  productList.innerHTML = sections.map((section) => `
-    <section class="admin-product-group" aria-labelledby="admin-product-group-${section.key}">
+  productList.innerHTML = sections.map((section, index) => `
+    <section class="admin-product-group" aria-labelledby="admin-product-group-${index}">
       <header class="admin-product-group-heading">
-        <h3 id="admin-product-group-${section.key}">${section.title}</h3>
+        <h3 id="admin-product-group-${index}">${escapeHtml(section.title)}</h3>
         <span>${section.products.length} ${section.products.length === 1 ? "producto" : "productos"}</span>
       </header>
       <div class="admin-product-group-grid">${section.products.map(renderProductCard).join("")}</div>
@@ -303,6 +330,54 @@ const openProductForm = (product = null) => {
   fields.name.focus();
 };
 
+const categoryIcon = (category) => {
+  const key = normalizeCategoryText(category);
+  if (key.includes("perfume") || key.includes("fragancia")) return "fa-spray-can-sparkles";
+  if (key.includes("calzado") || key.includes("tenis") || key.includes("zapato")) return "fa-shoe-prints";
+  if (key.includes("lente")) return "fa-glasses";
+  if (key.includes("ropa") || key.includes("prenda")) return "fa-shirt";
+  if (key.includes("accesorio")) return "fa-bag-shopping";
+  return "fa-box-open";
+};
+
+const syncProductCategoryOptions = () => {
+  const select = productForm.elements.category;
+  const selected = select.value;
+  select.innerHTML = `<option value="">Elige una sección</option>${categoryCache.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join("")}`;
+  select.value = selected;
+};
+
+const renderCategoryChoices = () => {
+  categoryChoices.innerHTML = categoryCache.map((category) => `<button class="admin-category-choice" type="button" data-category-choice="${escapeHtml(category)}"><span class="admin-category-choice-icon"><i class="fa-solid ${categoryIcon(category)}" aria-hidden="true"></i></span><span>${escapeHtml(category)}</span><i class="fa-solid fa-arrow-right admin-category-choice-arrow" aria-hidden="true"></i></button>`).join("");
+};
+
+const openCategoryPicker = async () => {
+  try {
+    categoryCache = await adminFetch("/api/admin/categories");
+    renderCategoryChoices();
+    syncProductCategoryOptions();
+    $("#adminNewCategoryForm").hidden = true;
+    $("#adminShowNewCategory").hidden = false;
+    categoryDialog.showModal();
+    categoryDialog.querySelector("[data-category-choice]")?.focus();
+  } catch (error) {
+    showMessage(error.message, true);
+  }
+};
+
+const transitionToProductForm = async (category) => {
+  const picker = categoryDialog.querySelector(".admin-category-picker");
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches && picker.animate) {
+    await picker.animate([{ opacity: 1, transform: "translateY(0) scale(1)" }, { opacity: 0, transform: "translateY(8px) scale(.985)" }], { duration: 160, easing: "cubic-bezier(0.23, 1, 0.32, 1)" }).finished.catch(() => {});
+  }
+  categoryDialog.close();
+  openProductForm();
+  productForm.elements.category.value = category;
+  activeCategory = category;
+  renderCategoryFields({}, true);
+  productForm.elements.name.focus();
+};
+
 const renderImagePreviews = (animate = false) => {
   imagePreview.innerHTML = imageEntries.map((entry, index) => `<article class="admin-image-item"><img src="${escapeHtml(entry.objectUrl || entry.src)}" alt="Fotografía ${index + 1}" /><span>Foto ${index + 1}${index === 0 ? " · Principal" : ""}</span><div><button class="admin-image-action" type="button" data-image-action="up" data-index="${index}" aria-label="Mover foto ${index + 1} antes" ${index === 0 ? "disabled" : ""}>↑</button><button class="admin-image-action" type="button" data-image-action="down" data-index="${index}" aria-label="Mover foto ${index + 1} después" ${index === imageEntries.length - 1 ? "disabled" : ""}>↓</button><button class="admin-image-action admin-image-remove" type="button" data-image-action="remove" data-index="${index}" aria-label="Quitar foto ${index + 1}">Quitar</button></div></article>`).join("");
   imagePreview.hidden = imageEntries.length === 0;
@@ -320,18 +395,14 @@ const categoryOptions = {
 
 const renderCategoryFields = (details = {}, animate = false) => {
   const category = productForm.elements.category.value;
-  const config = categoryOptions[category];
-  if (!config) {
-    categoryFields.hidden = true;
-    categoryFields.innerHTML = "";
-    return;
-  }
+  const config = categoryOptions[category] || { types: [category === "Lentes" ? "Lentes" : category === "Otros" ? "Otro" : category] };
   const typeOptions = config.types.map((type) => `<option${details.type === type ? " selected" : ""}>${escapeHtml(type.trim())}</option>`).join("");
   const perfumeFields = category === "Perfumes" ? `
     <label class="admin-field">Familia olfativa<input class="admin-input" name="fragranceFamily" maxlength="80" value="${escapeHtml(details.fragranceFamily || "")}" placeholder="Floral, amaderada, cítrica…" /></label>
     <label class="admin-field">Concentración<select class="admin-input" name="concentration"><option value="">Selecciona una opción</option>${["Parfum", "Eau de parfum", "Eau de toilette", "Eau de cologne", "Body mist"].map((value) => `<option${details.concentration === value ? " selected" : ""}>${value}</option>`).join("")}</select></label>` : "";
   const sharedFields = category === "Perfumes" ? "" : `<label class="admin-field">Material<input class="admin-input" name="material" maxlength="100" value="${escapeHtml(details.material || "")}" placeholder="Algodón, piel, metal…" /></label>`;
-  categoryFields.innerHTML = `<div class="admin-category-heading"><strong>Detalles de ${category.toLocaleLowerCase("es-MX")}</strong></div><div class="admin-category-grid"><label class="admin-field">${category === "Perfumes" ? "Tipo de fragancia" : category === "Ropa" ? "Tipo de prenda" : category === "Calzado" ? "Tipo de calzado" : "Tipo de accesorio"}<select class="admin-input" name="productType"><option value="">Selecciona una opción</option>${typeOptions}</select></label>${perfumeFields}${sharedFields}</div>`;
+  const typeLabel = category === "Perfumes" ? "Tipo de fragancia" : category === "Ropa" ? "Tipo de prenda" : category === "Calzado" ? "Tipo de calzado" : category === "Accesorios" ? "Tipo de accesorio" : "Tipo de producto";
+  categoryFields.innerHTML = `<div class="admin-category-heading"><strong>Detalles de ${category.toLocaleLowerCase("es-MX")}</strong></div><div class="admin-category-grid"><label class="admin-field">${typeLabel}<select class="admin-input" name="productType"><option value="">Selecciona una opción</option>${typeOptions}</select></label>${perfumeFields}${sharedFields}</div>`;
   categoryFields.hidden = false;
   if (animate && !matchMedia("(prefers-reduced-motion: reduce)").matches) categoryFields.animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }], { duration: 180, easing: "cubic-bezier(0.23, 1, 0.32, 1)" });
   categoryFields.dataset.initialized = "true";
@@ -398,8 +469,38 @@ loginForm.addEventListener("submit", async (event) => {
   }
 });
 
-$("#adminAddProduct").addEventListener("click", () => openProductForm());
-$("#adminNavAdd").addEventListener("click", () => openProductForm());
+$("#adminAddProduct").addEventListener("click", openCategoryPicker);
+$("#adminNavAdd").addEventListener("click", openCategoryPicker);
+$("#adminShowNewCategory").addEventListener("click", () => {
+  $("#adminNewCategoryForm").hidden = false;
+  $("#adminShowNewCategory").hidden = true;
+  $("#adminNewCategoryName").focus();
+});
+$("#adminCancelNewCategory").addEventListener("click", () => {
+  $("#adminNewCategoryForm").reset();
+  $("#adminNewCategoryForm").hidden = true;
+  $("#adminShowNewCategory").hidden = false;
+  $("#adminShowNewCategory").focus();
+});
+categoryChoices.addEventListener("click", (event) => {
+  const choice = event.target.closest("[data-category-choice]");
+  if (choice) transitionToProductForm(choice.dataset.categoryChoice);
+});
+$("#adminNewCategoryForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = $("#adminSaveNewCategory");
+  button.disabled = true;
+  try {
+    const result = await adminFetch("/api/admin/categories", { method: "POST", body: JSON.stringify({ name: $("#adminNewCategoryName").value }) });
+    categoryCache = result.categories;
+    syncProductCategoryOptions();
+    await transitionToProductForm(result.category);
+  } catch (error) {
+    showMessage(error.message, true);
+  } finally {
+    button.disabled = false;
+  }
+});
 $("#adminProductsLink").addEventListener("click", () => { $("#adminWorkspace").scrollIntoView({ behavior: "smooth" }); });
 productForm.elements.category.addEventListener("change", () => {
   if (activeCategory) categoryDrafts[activeCategory] = JSON.parse(productForm.elements.categoryDetails.value || "{}");
@@ -560,6 +661,9 @@ $("#adminLogout").addEventListener("click", async () => {
 
 $("#adminProductDialog").addEventListener("click", (event) => {
   if (event.target === productDialog) productDialog.close();
+});
+categoryDialog.addEventListener("click", (event) => {
+  if (event.target === categoryDialog) categoryDialog.close();
 });
 
 document.addEventListener("keydown", (event) => {

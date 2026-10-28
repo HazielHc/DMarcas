@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let headerAnimationFrame = 0;
   let headerTransitionVersion = 0;
   const categoryNav = document.querySelector('nav[aria-label="Categorías"]');
-  const categoryIndicator = categoryNav?.querySelector(".category-active-indicator");
+  let categoryIndicator = categoryNav?.querySelector(".category-active-indicator");
   let categoryIndicatorAnimation = null;
 
   const moveCategoryIndicator = (shouldAnimate = true) => {
@@ -240,7 +240,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const productsCountEl = document.getElementById("productsCount");
   const searchInput = document.getElementById("searchInput");
   const searchInputMobile = document.getElementById("searchInputMobile");
-  const categoryTabs = document.querySelectorAll(".category-tab-btn");
   const categorySelectMobile = document.getElementById("categorySelectMobile");
   const mobileFilterToggle = document.getElementById("mobileFilterToggle");
   const catalogControls = document.querySelector(".catalog-controls");
@@ -261,6 +260,31 @@ document.addEventListener("DOMContentLoaded", () => {
   const sortSelect = document.getElementById("sortSelect");
   const saleOnlyCheckbox = document.getElementById("saleOnlyCheckbox");
   const brandChips = document.querySelectorAll(".brand-chip-btn");
+
+  const renderDesktopCategoryTabs = () => {
+    if (!categoryNav) return;
+    const pinnedCategories = ["Perfumes", "Calzado", "Ropa", "Accesorios", "Lentes", "Otros"];
+    const seen = new Set();
+    const categories = [...pinnedCategories, ...state.products.map((product) => String(product.category || "Otros").trim())]
+      .filter((category) => {
+        const key = category.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-MX");
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    const iconFor = (category) => {
+      const key = category.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-MX");
+      if (/perfume|fragancia/.test(key)) return "fa-spray-can-sparkles";
+      if (/calzado|tenis|zapato/.test(key)) return "fa-shoe-prints";
+      if (/lente/.test(key)) return "fa-glasses";
+      if (/ropa|prenda/.test(key)) return "fa-shirt";
+      if (/accesorio/.test(key)) return "fa-bag-shopping";
+      return "fa-box-open";
+    };
+    categoryNav.innerHTML = `<button aria-pressed="${state.selectedCategory === "all"}" class="category-tab-btn${state.selectedCategory === "all" ? " active font-black text-neutral-950" : " text-neutral-500"} min-h-[44px] px-3.5 py-2 transition-colors" data-category="all">TODOS</button>${categories.map((category) => `<button aria-pressed="${state.selectedCategory === category}" class="category-tab-btn${state.selectedCategory === category ? " active font-black text-neutral-950" : " text-neutral-500"} min-h-[44px] px-3.5 py-2 transition-colors" data-category="${escapeHtml(category)}"><i class="fa-solid ${iconFor(category)} mr-1" aria-hidden="true"></i> ${escapeHtml(category.toLocaleUpperCase("es-MX"))}</button>`).join("")}<button aria-pressed="${state.selectedCategory === "ofertas"}" class="category-tab-btn${state.selectedCategory === "ofertas" ? " active font-black text-neutral-950" : " text-red-700"} min-h-[44px] px-3.5 py-2 transition-colors" data-category="ofertas"><i class="fa-solid fa-fire mr-1" aria-hidden="true"></i> OFERTAS</button><span class="category-active-indicator" aria-hidden="true"></span>`;
+    categoryIndicator = categoryNav.querySelector(".category-active-indicator");
+    moveCategoryIndicator(false);
+  };
 
   const mobileScrollRevealObserver = "IntersectionObserver" in window
     ? new IntersectionObserver((entries, observer) => {
@@ -435,9 +459,12 @@ document.addEventListener("DOMContentLoaded", () => {
       if (state.selectedCategory === "ofertas") {
         result = result.filter((p) => p.onSale);
       } else {
-        result = result.filter(
-          (p) => p.category.toLowerCase() === state.selectedCategory.toLowerCase()
-        );
+        const selectedKey = state.selectedCategory.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-MX");
+        result = result.filter((product) => {
+          const categoryKey = String(product.category || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-MX");
+          if (categoryKey === selectedKey) return true;
+          return selectedKey === "lentes" && categoryKey === "accesorios" && /lentes?/.test(`${product.details?.type || ""} ${product.name}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-MX"));
+        });
       }
     }
 
@@ -1333,7 +1360,7 @@ ${itemsText}
 
   // Una sola fuente de verdad para las pestañas de escritorio y el selector móvil.
   const updateCategoryControls = (category) => {
-    categoryTabs.forEach((tab) => {
+    categoryNav?.querySelectorAll(".category-tab-btn").forEach((tab) => {
       const selected = tab.getAttribute("data-category") === category;
       tab.classList.toggle("active", selected);
       tab.classList.toggle("font-black", selected);
@@ -1367,11 +1394,12 @@ ${itemsText}
     setCategory(category);
   };
 
-  categoryTabs.forEach((tab) => {
-    tab.addEventListener("click", (event) => {
+  categoryNav?.addEventListener("click", (event) => {
+    const tab = event.target.closest(".category-tab-btn");
+    if (tab) {
       const behavior = event.detail > 0 && !prefersReducedMotion ? "smooth" : "instant";
       changeCategory(tab.getAttribute("data-category"), behavior);
-    });
+    }
   });
   mobileFilterToggle?.addEventListener("click", () => {
     const open = mobileFilterToggle.getAttribute("aria-expanded") !== "true";
@@ -1532,6 +1560,7 @@ ${itemsText}
     } catch {
       // El catálogo local de respaldo permite abrir la versión estática.
     }
+    renderDesktopCategoryTabs();
     renderMobileCategoryCards();
     initBrandFilter();
     applyFilters();

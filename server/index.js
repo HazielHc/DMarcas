@@ -14,6 +14,7 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
 const SESSION_SECRET = process.env.SESSION_SECRET || "";
 const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(ROOT, "data"));
 const PRODUCTS_FILE = path.join(DATA_DIR, "products.json");
+const CATEGORIES_FILE = path.join(DATA_DIR, "categories.json");
 const PRODUCT_IMAGES_DIR = path.join(DATA_DIR, "product-images");
 const SESSION_COOKIE = "__Host-dm-admin";
 const SESSION_TTL_SECONDS = 60 * 60 * 12;
@@ -29,6 +30,8 @@ const isProduction = process.env.NODE_ENV === "production";
 const cookieName = isProduction ? SESSION_COOKIE : "dm-admin";
 const passwordDigest = crypto.scryptSync(ADMIN_PASSWORD, SESSION_SALT, 64);
 let products = [];
+const DEFAULT_CATEGORIES = ["Perfumes", "Calzado", "Lentes", "Ropa", "Accesorios", "Otros"];
+let categories = [...DEFAULT_CATEGORIES];
 let writeQueue = Promise.resolve();
 
 app.disable("x-powered-by");
@@ -202,12 +205,51 @@ async function persistProducts(nextProducts) {
   await writeQueue;
 }
 
+function categoryKey(value) {
+  return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-MX").trim();
+}
+
+function mergeCategories(values) {
+  const seen = new Set();
+  return values.map((value) => cleanText(value, "La sección", 50, true)).filter((value) => {
+    const key = categoryKey(value);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+async function persistCategories(nextCategories) {
+  const temporaryFile = `${CATEGORIES_FILE}.tmp`;
+  await writeFile(temporaryFile, `${JSON.stringify(nextCategories, null, 2)}\n`, "utf8");
+  await rename(temporaryFile, CATEGORIES_FILE);
+}
+
 function handleValidationError(error, res) {
   return res.status(400).json({ error: error.message || "No se pudieron guardar los cambios." });
 }
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 app.get("/api/products", (_req, res) => res.set("Cache-Control", "no-store").json(products));
+
+app.get("/api/admin/categories", ownerOnly, (_req, res) => {
+  const merged = mergeCategories([...categories, ...products.map((product) => product.category)]);
+  res.set("Cache-Control", "no-store").json(merged);
+});
+
+app.post("/api/admin/categories", sameOrigin, ownerOnly, async (req, res) => {
+  try {
+    const name = cleanText(req.body?.name, "El nombre de la sección", 50, true);
+    const existing = categories.find((category) => categoryKey(category) === categoryKey(name));
+    if (existing) return res.json({ category: existing, categories });
+    const nextCategories = mergeCategories([...categories, name]);
+    await persistCategories(nextCategories);
+    categories = nextCategories;
+    res.status(201).json({ category: name, categories });
+  } catch (error) {
+    handleValidationError(error, res);
+  }
+});
 
 app.get("/api/admin/session", (req, res) => {
   res.set("Cache-Control", "no-store").json({ authenticated: isAuthenticated(req) });
@@ -344,6 +386,14 @@ app.use((error, _req, res, _next) => {
 
 await mkdir(DATA_DIR, { recursive: true });
 try {
+  const savedCategories = JSON.parse(await readFile(CATEGORIES_FILE, "utf8"));
+  if (!Array.isArray(savedCategories)) throw new Error("Formato inválido.");
+  categories = mergeCategories([...DEFAULT_CATEGORIES, ...savedCategories]);
+} catch (error) {
+  if (error.code !== "ENOENT") console.error("No se pudo leer categories.json; se cargarán las secciones iniciales.", error.message);
+  categories = [...DEFAULT_CATEGORIES];
+}
+try {
   const saved = JSON.parse(await readFile(PRODUCTS_FILE, "utf8"));
   if (!Array.isArray(saved)) throw new Error("Formato inválido.");
   products = saved;
@@ -352,6 +402,9 @@ try {
   products = SEED_PRODUCTS.map((product) => ({ ...product }));
   await persistProducts(products);
 }
+
+categories = mergeCategories([...categories, ...products.map((product) => product.category)]);
+await persistCategories(categories);
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`API y servidor listos en el puerto ${PORT}.`);
