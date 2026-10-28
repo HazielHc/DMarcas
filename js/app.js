@@ -20,6 +20,57 @@ document.addEventListener("DOMContentLoaded", () => {
   const headerAnimations = new Set();
   let headerAnimationFrame = 0;
   let headerTransitionVersion = 0;
+  const categoryNav = document.querySelector('nav[aria-label="Categorías"]');
+  const categoryIndicator = categoryNav?.querySelector(".category-active-indicator");
+  let categoryIndicatorAnimation = null;
+
+  const moveCategoryIndicator = (shouldAnimate = true) => {
+    const selectedTab = categoryNav?.querySelector(".category-tab-btn.active");
+    if (!selectedTab || !categoryIndicator) return;
+    const navBounds = categoryNav.getBoundingClientRect();
+    const targetBounds = selectedTab.getBoundingClientRect();
+    if (!navBounds.width || !targetBounds.width) return;
+
+    const currentBounds = categoryIndicator.getBoundingClientRect();
+    const wasPositioned = categoryIndicator.dataset.positioned === "true";
+    const targetX = targetBounds.left - navBounds.left;
+    categoryIndicatorAnimation?.cancel();
+    categoryIndicatorAnimation = null;
+    categoryIndicator.style.width = `${targetBounds.width}px`;
+    const targetTransform = `translate3d(${targetX}px, 0, 0)`;
+
+    if (!shouldAnimate || !wasPositioned || reducedMotionQuery.matches || !currentBounds.width) {
+      categoryIndicator.style.transform = targetTransform;
+      categoryIndicator.dataset.positioned = "true";
+      return;
+    }
+
+    const startX = currentBounds.left - navBounds.left;
+    const startScale = currentBounds.width / targetBounds.width;
+    const animation = categoryIndicator.animate(
+      [
+        { transform: `translate3d(${startX}px, 0, 0) scaleX(${startScale})` },
+        { transform: targetTransform }
+      ],
+      { duration: 220, easing: "cubic-bezier(0.77, 0, 0.175, 1)" }
+    );
+    categoryIndicatorAnimation = animation;
+    categoryIndicator.dataset.positioned = "true";
+    animation.onfinish = () => {
+      if (categoryIndicatorAnimation !== animation) return;
+      categoryIndicator.style.transform = targetTransform;
+      categoryIndicatorAnimation = null;
+      animation.cancel();
+    };
+  };
+
+  window.addEventListener("resize", () => moveCategoryIndicator(false), { passive: true });
+  reducedMotionQuery.addEventListener("change", (event) => {
+    if (!event.matches) return;
+    categoryIndicatorAnimation?.cancel();
+    categoryIndicatorAnimation = null;
+    moveCategoryIndicator(false);
+  });
 
   const animateHeaderReflow = (before) => {
     const version = ++headerTransitionVersion;
@@ -36,13 +87,16 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!next.width || !next.height) continue;
         const dx = rect.left - next.left;
         const dy = rect.top - next.top;
-        if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue;
+        const isLogo = element.matches(".brand-logo-frame");
+        const scaleX = isLogo && next.width ? rect.width / next.width : 1;
+        const scaleY = isLogo && next.height ? rect.height / next.height : 1;
+        if (Math.abs(dx) < 1 && Math.abs(dy) < 1 && Math.abs(scaleX - 1) < 0.01 && Math.abs(scaleY - 1) < 0.01) continue;
         const animation = element.animate(
           [
-            { transform: `translate(${dx}px, ${dy}px)` },
+            { transform: `translate3d(${dx}px, ${dy}px, 0) scale(${scaleX}, ${scaleY})` },
             { transform: "translate(0, 0)" }
           ],
-          { duration: 380, easing: "cubic-bezier(0.23, 1, 0.32, 1)" }
+          { duration: 280, easing: "cubic-bezier(0.23, 1, 0.32, 1)" }
         );
         headerAnimations.add(animation);
         animation.onfinish = () => headerAnimations.delete(animation);
@@ -55,6 +109,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!storeHeader || compact === headerCompact) return;
     const movingParts = [
       storeHeader.querySelector("#brandHomeLink"),
+      storeHeader.querySelector("#brandHomeLink .brand-logo-frame"),
       storeHeader.querySelector('nav[aria-label="Categorías"]'),
       storeHeader.querySelector("#desktopSearchWrap"),
       storeHeader.querySelector("#headerActions"),
@@ -65,6 +120,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const expandedFlowHeight = storeHeader.getBoundingClientRect().height;
     headerCompact = compact;
     storeHeader.classList.toggle("is-compact", compact);
+    moveCategoryIndicator(false);
     if (compact && !headerSpacer) {
       headerSpacer = document.createElement("div");
       headerSpacer.setAttribute("aria-hidden", "true");
@@ -95,10 +151,15 @@ document.addEventListener("DOMContentLoaded", () => {
     scrollFrame = requestAnimationFrame(updateHeaderOnScroll);
   }, { passive: true });
   if (window.scrollY > 64) setHeaderCompact(true, false);
+  moveCategoryIndicator(false);
 
   compactSearchToggles.forEach((button) => {
     button.addEventListener("click", () => {
       if (!storeHeader) return;
+      if (button.classList.contains("mobile-search-toggle") && window.matchMedia("(max-width: 767px)").matches) {
+        openMobileSearch();
+        return;
+      }
       const open = !storeHeader.classList.contains("is-search-open");
       storeHeader.classList.toggle("is-search-open", open);
       compactSearchToggles.forEach((toggle) => toggle.setAttribute("aria-expanded", String(open)));
@@ -108,8 +169,13 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
   });
-  storeHeader?.addEventListener("keydown", (event) => {
-    if (event.key !== "Escape" || !storeHeader.classList.contains("is-search-open")) return;
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    if (mobileSearchOverlay?.classList.contains("is-open") && !productModal?.classList.contains("active")) {
+      closeMobileSearch({ restoreFocus: true });
+      return;
+    }
+    if (!storeHeader.classList.contains("is-search-open")) return;
     storeHeader.classList.remove("is-search-open");
     compactSearchToggles.forEach((button) => button.setAttribute("aria-expanded", "false"));
   });
@@ -151,6 +217,7 @@ document.addEventListener("DOMContentLoaded", () => {
     products: [...INITIAL_PRODUCTS],
     filteredProducts: [...INITIAL_PRODUCTS],
     selectedCategory: "all",
+    mobileCategoryGroupId: null,
     selectedBrand: "all",
     searchQuery: "",
     sortBy: "featured",
@@ -175,10 +242,49 @@ document.addEventListener("DOMContentLoaded", () => {
   const searchInputMobile = document.getElementById("searchInputMobile");
   const categoryTabs = document.querySelectorAll(".category-tab-btn");
   const categorySelectMobile = document.getElementById("categorySelectMobile");
+  const mobileFilterToggle = document.getElementById("mobileFilterToggle");
+  const catalogControls = document.querySelector(".catalog-controls");
+  const catalogSection = document.getElementById("catalogoSection");
+  const mobileCategoryHome = document.getElementById("mobileCategoryHome");
+  const mobileSearchOverlay = document.getElementById("mobileSearchOverlay");
+  const mobileSearchClose = document.getElementById("mobileSearchClose");
+  const mobileSearchClear = document.getElementById("mobileSearchClear");
+  const mobileSearchSuggestions = document.getElementById("mobileSearchSuggestions");
+  const mobileSearchResults = document.getElementById("mobileSearchResults");
+  const mobileCategoryGrid = document.getElementById("mobileCategoryGrid");
+  const mobileCategoryResultsHeader = document.getElementById("mobileCategoryResultsHeader");
+  const mobileCategoryBack = document.getElementById("mobileCategoryBack");
+  const mobileCategoryTitle = document.getElementById("mobileCategoryTitle");
+  const mobileCategoryCount = document.getElementById("mobileCategoryCount");
+  const mobileCategoryGroups = new Map();
   const brandSelect = document.getElementById("brandSelect");
   const sortSelect = document.getElementById("sortSelect");
   const saleOnlyCheckbox = document.getElementById("saleOnlyCheckbox");
   const brandChips = document.querySelectorAll(".brand-chip-btn");
+
+  const mobileScrollRevealObserver = "IntersectionObserver" in window
+    ? new IntersectionObserver((entries, observer) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-visible");
+        observer.unobserve(entry.target);
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -24px 0px" })
+    : null;
+  document.body.classList.add("mobile-scroll-reveal-ready");
+  const observeMobileScrollReveals = (scope = document) => {
+    const elements = scope.querySelectorAll?.(".mobile-scroll-reveal:not([data-reveal-observed])") || [];
+    elements.forEach((element, index) => {
+      element.dataset.revealObserved = "true";
+      element.style.setProperty("--reveal-delay", `${Math.min(index * 48, 96)}ms`);
+      if (!mobileScrollRevealObserver || reducedMotionQuery.matches) {
+        element.classList.add("is-visible");
+      } else {
+        mobileScrollRevealObserver.observe(element);
+      }
+    });
+  };
+  observeMobileScrollReveals();
 
   // Elementos Modal
   const productModal = document.getElementById("productModal");
@@ -188,6 +294,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const modalCategoryBadge = document.getElementById("modalCategoryBadge");
   const modalBrand = document.getElementById("modalBrand");
   const modalSku = document.getElementById("modalSku");
+  const modalGender = document.getElementById("modalGender");
+  const modalStockStatus = document.getElementById("modalStockStatus");
   const modalTitle = document.getElementById("modalTitle");
   const modalPriceCurrent = document.getElementById("modalPriceCurrent");
   const modalPriceRegular = document.getElementById("modalPriceRegular");
@@ -200,6 +308,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const qtyDisplay = document.getElementById("qtyDisplay");
   const modalTotalDisplay = document.getElementById("modalTotalDisplay");
   const btnModalWhatsapp = document.getElementById("btnModalWhatsapp");
+  const btnModalWhatsappLabel = document.getElementById("btnModalWhatsappLabel");
   const btnModalAddToCart = document.getElementById("btnModalAddToCart");
 
   // Elementos Carrito / Bolsa
@@ -211,6 +320,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const cartSubtotalEl = document.getElementById("cartSubtotal");
   const btnSendCartWhatsapp = document.getElementById("btnSendCartWhatsapp");
   let previouslyFocusedElement = null;
+  let modalOriginImage = null;
+  let modalImageFlight = null;
 
   // Formato de moneda en Pesos Mexicanos
   const formatPrice = (price) => {
@@ -233,12 +344,94 @@ document.addEventListener("DOMContentLoaded", () => {
     brandSelect.value = state.selectedBrand;
   };
 
+  const normalizeCategoryKey = (value) => String(value ?? "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("es-MX");
+
+  const getMobileCategoryGroup = (product) => {
+    const category = String(product.category || "Otros").trim();
+    const categoryKey = normalizeCategoryKey(category);
+    const productType = String(product.details?.type || "").trim();
+    const typeKey = normalizeCategoryKey(productType);
+
+    if (categoryKey === "accesorios" && /lentes?/.test(typeKey)) {
+      return { id: "accesorios-lentes", label: "Lentes", category, type: productType };
+    }
+    if (categoryKey === "accesorios" && /pulseras?/.test(typeKey)) {
+      return { id: "accesorios-pulseras", label: "Pulseras", category, type: productType };
+    }
+
+    const labels = {
+      perfumes: "Perfumes",
+      calzado: "Calzado",
+      ropa: "Ropa",
+      accesorios: "Accesorios"
+    };
+    return {
+      id: `categoria-${categoryKey.replace(/[^a-z0-9]+/g, "-")}`,
+      label: labels[categoryKey] || category,
+      category,
+      type: ""
+    };
+  };
+
+  const renderMobileCategoryCards = () => {
+    if (!mobileCategoryGrid) return;
+    mobileCategoryGroups.clear();
+
+    for (const product of state.products) {
+      const group = getMobileCategoryGroup(product);
+      if (!mobileCategoryGroups.has(group.id)) mobileCategoryGroups.set(group.id, { ...group, products: [] });
+      mobileCategoryGroups.get(group.id).products.push(product);
+    }
+
+    const priority = { perfumes: 0, calzado: 1, lentes: 2, pulseras: 3, ropa: 4, accesorios: 5 };
+    const groups = [...mobileCategoryGroups.values()].sort((a, b) => {
+      const aPriority = priority[normalizeCategoryKey(a.label)] ?? 10;
+      const bPriority = priority[normalizeCategoryKey(b.label)] ?? 10;
+      return aPriority - bPriority || a.label.localeCompare(b.label, "es-MX");
+    });
+
+    if (!groups.length) {
+      mobileCategoryGrid.innerHTML = `<p class="mobile-category-empty">El catálogo se está preparando.</p>`;
+      return;
+    }
+    if (state.mobileCategoryGroupId && !mobileCategoryGroups.has(state.mobileCategoryGroupId)) {
+      state.mobileCategoryGroupId = null;
+      state.selectedCategory = "all";
+      showMobileCategoryHome();
+    }
+
+    mobileCategoryGrid.innerHTML = groups.map((group) => {
+      const representative = group.products.find((product) => product.featured && product.images?.length)
+        || group.products.find((product) => product.images?.length)
+        || group.products[0];
+      const rawImage = representative.images?.[0] || "/assets/logo.png";
+      const image = representative.id === "sauvage-extrain-ef27ec" && rawImage.startsWith("https://www.bing.com/images/search")
+        ? "/assets/products/sauvage-extrain.jpg"
+        : rawImage;
+
+      return `
+        <button type="button" class="mobile-category-card mobile-scroll-reveal" data-mobile-category="${escapeHtml(group.id)}" aria-label="Abrir categoría ${escapeHtml(group.label)}">
+          <span class="mobile-category-image"><img src="${escapeHtml(image)}" alt="" loading="lazy" /></span>
+          <span class="mobile-category-card-label"><span>${escapeHtml(group.label)}</span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></span>
+        </button>
+      `;
+    }).join("");
+    observeMobileScrollReveals(mobileCategoryGrid);
+  };
+
   // 2. Filtrado y ordenamiento de productos
   const applyFilters = () => {
     let result = [...state.products];
 
+    // La vista móvil agrupa por categoría y, en accesorios, separa lentes/pulseras.
+    if (state.mobileCategoryGroupId && window.matchMedia("(max-width: 767px)").matches) {
+      result = result.filter((product) => getMobileCategoryGroup(product).id === state.mobileCategoryGroupId);
     // Filtro por categoría
-    if (state.selectedCategory !== "all") {
+    } else if (state.selectedCategory !== "all") {
       if (state.selectedCategory === "ofertas") {
         result = result.filter((p) => p.onSale);
       } else {
@@ -301,8 +494,41 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   // 3. Renderizar productos con cascada de Anime.js y tipografía Imagen 2
+  const syncMobileSearchResults = () => {
+    if (!mobileSearchResults || !productsGrid) return;
+    const searchCards = Array.from(productsGrid.children, (card) => card.cloneNode(true));
+    searchCards.forEach((card) => {
+      const resetButton = card.querySelector("#btnResetFilters");
+      if (resetButton) resetButton.id = "mobileSearchResetFilters";
+    });
+    mobileSearchResults.replaceChildren(...searchCards);
+
+    const query = searchInputMobile?.value.trim() || "";
+    if (mobileSearchClear) mobileSearchClear.hidden = !query;
+    if (!mobileSearchSuggestions) return;
+    const suggestions = new Set();
+    const normalizedQuery = normalizeCategoryKey(query);
+    if (normalizedQuery) {
+      for (const product of state.filteredProducts) {
+        const gender = String(product.gender || "").trim();
+        const phrase = gender ? `${product.category} para ${gender}` : product.category;
+        if (normalizeCategoryKey(phrase).includes(normalizedQuery)) suggestions.add(phrase);
+        if (normalizeCategoryKey(product.brand).includes(normalizedQuery)) suggestions.add(product.brand);
+        if (suggestions.size >= 4) break;
+      }
+    }
+    mobileSearchSuggestions.hidden = suggestions.size === 0;
+    mobileSearchSuggestions.innerHTML = [...suggestions].map((suggestion) =>
+      `<button type="button" class="mobile-search-suggestion" data-search-suggestion="${escapeHtml(suggestion)}">${escapeHtml(suggestion)}</button>`
+    ).join("");
+  };
+
   const renderProducts = () => {
     productsCountEl.textContent = `${state.filteredProducts.length} DISPONIBLES`;
+    if (mobileCategoryCount) {
+      const count = state.filteredProducts.length;
+      mobileCategoryCount.textContent = `${count} ${count === 1 ? "producto" : "productos"}`;
+    }
 
     if (state.filteredProducts.length === 0) {
       animateNextCategoryRender = false;
@@ -320,6 +546,7 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("btnResetFilters")?.addEventListener("click", () => {
         resetAllFilters();
       });
+      syncMobileSearchResults();
       return;
     }
 
@@ -333,79 +560,36 @@ document.addEventListener("DOMContentLoaded", () => {
           ? "/assets/products/sauvage-extrain.jpg"
           : imagePath;
 
-        return `
-        <article class="product-card-anim bg-white rounded border border-neutral-200/90 overflow-hidden flex flex-col group transition-colors duration-200" data-id="${escapeHtml(product.id)}">
-          
-          <!-- Imagen de Producto -->
-          <div class="relative aspect-square bg-neutral-100 overflow-hidden">
-            <img src="${escapeHtml(productImage)}" alt="${escapeHtml(product.name)}" loading="lazy" class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300" />
-            
-            <!-- Badges de oferta y novedad -->
-            <div class="absolute top-2.5 left-2.5 flex flex-col gap-1.5 z-10">
-              ${
-                product.onSale
-                  ? `<span class="bg-red-700 text-white font-display font-black text-[11px] tracking-wide px-2 py-1 rounded-md">-${discountPercent}% desc.</span>`
-                  : ""
-              }
-              ${
-                product.isNew
-                  ? `<span class="bg-blue-800 text-white font-display font-bold text-[11px] tracking-wide px-2 py-1 rounded-md">Nuevo</span>`
-                  : ""
-              }
-            </div>
+        const unavailable = /agotado|sin stock|no disponible/i.test(product.stockStatus || "");
 
-            <div class="absolute top-2.5 right-2.5 z-10">
-              <span class="bg-neutral-950/90 text-white text-[11px] font-display font-bold px-2 py-1 rounded-md">
-                Selección DM
-              </span>
+        return `
+        <article class="product-card-anim product-card group" data-id="${escapeHtml(product.id)}">
+          <div class="product-card-media">
+            <button type="button" class="product-image-trigger" data-id="${escapeHtml(product.id)}" aria-label="Ver detalles de ${escapeHtml(product.name)}">
+              <img src="${escapeHtml(productImage)}" alt="" loading="lazy" />
+            </button>
+            <div class="product-card-badges" aria-label="Etiquetas del producto">
+              ${product.onSale ? `<span class="product-badge product-badge-sale">-${discountPercent}%</span>` : ""}
+              ${product.isNew ? `<span class="product-badge product-badge-new">Nuevo</span>` : ""}
             </div>
+            ${product.featured ? `<span class="product-badge product-badge-featured">Selección DM</span>` : ""}
+            <span class="product-image-prompt" aria-hidden="true">Ver producto <i class="fa-solid fa-arrow-up-right-from-square"></i></span>
           </div>
 
-          <!-- Contenido: Jerarquía tipográfica exacta de Imagen 2 -->
-          <div class="p-3 sm:p-4 flex flex-col flex-1">
-            
-            <!-- Badge de categoría estilo Imagen 2: [FRAGRANCE] -->
-            <div class="flex flex-wrap items-center justify-between gap-y-1 mb-2">
-              <span class="inline-block border border-neutral-300 px-2 py-0.5 rounded-md text-xs font-display font-bold text-neutral-800 bg-neutral-50">
-                ${escapeHtml(product.category)}
-              </span>
-              <span class="text-xs font-display font-bold text-neutral-700 whitespace-nowrap">
-                ${escapeHtml(product.brand)}
-              </span>
+          <div class="product-card-copy">
+            <div class="product-card-heading">
+              <p class="product-card-brand">${escapeHtml(product.brand)}</p>
+              <span class="product-card-category">${escapeHtml(product.category)}</span>
             </div>
-
-            <!-- Título del producto en Negrita Mayúscula estilo ODYSSEY MANDARIN SKY -->
-            <h3 class="font-display font-bold text-sm sm:text-base tracking-tight text-neutral-950 leading-snug line-clamp-2 min-h-[2.6rem]" title="${escapeHtml(product.name)}">
-              ${escapeHtml(product.name)}
-            </h3>
-
-            <!-- Línea divisoria elegante -->
-            <div class="border-b border-neutral-200/90 my-2.5"></div>
-
-            <!-- Fila de Precio -->
-            <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 mb-4 mt-auto">
-              <span class="font-display font-black text-base sm:text-lg text-neutral-950 whitespace-nowrap">
-                ${formatPrice(product.offerPrice)}
-              </span>
-              ${
-                product.onSale
-                  ? `<span class="text-xs font-semibold text-neutral-600 line-through whitespace-nowrap">${formatPrice(product.regularPrice)}</span>`
-                  : ""
-              }
+            <h3 class="product-card-title" title="${escapeHtml(product.name)}">${escapeHtml(product.name)}</h3>
+            <div class="product-card-price">
+              <span>${formatPrice(product.offerPrice)}</span>
+              ${product.onSale ? `<span class="product-card-regular-price">${formatPrice(product.regularPrice)}</span>` : ""}
             </div>
-
-            <!-- Botones de Acción -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-              <button class="btn-open-detail min-h-[44px] w-full py-2.5 px-3 rounded border border-neutral-300 hover:border-neutral-950 bg-white text-neutral-900 text-[13px] font-display font-bold transition-colors flex items-center justify-center gap-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950" data-id="${escapeHtml(product.id)}">
-                <i class="fa-solid fa-eye text-xs"></i>
-                <span>Ver detalles</span>
-              </button>
-
-              <button class="btn-quick-wa min-h-[44px] w-full px-3 py-2.5 rounded bg-emerald-700 hover:bg-emerald-800 text-white flex items-center justify-center text-[13px] font-display font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800" data-id="${escapeHtml(product.id)}" aria-label="Pedir ${escapeHtml(product.name)} por WhatsApp">
-                <span>Pedir</span>
-              </button>
+            <div class="product-card-actions">
+              <button type="button" class="btn-open-detail" data-id="${escapeHtml(product.id)}">Ver detalles</button>
+              <button type="button" class="btn-quick-wa" data-id="${escapeHtml(product.id)}" aria-label="${unavailable ? "Consultar disponibilidad de" : "Pedir"} ${escapeHtml(product.name)} por WhatsApp">${unavailable ? "Consultar" : "Pedir"}</button>
             </div>
-
           </div>
         </article>
       `;
@@ -439,6 +623,12 @@ document.addEventListener("DOMContentLoaded", () => {
     animateNextCatalogRender = false;
 
     // Eventos en tarjetas
+    document.querySelectorAll(".product-image-trigger").forEach((button) => {
+      button.addEventListener("click", () => {
+        openProductModal(button.getAttribute("data-id"), button.querySelector("img"));
+      });
+    });
+
     document.querySelectorAll(".btn-open-detail").forEach((btn) => {
       btn.addEventListener("click", () => {
         const prodId = btn.getAttribute("data-id");
@@ -456,12 +646,188 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       });
     });
+    syncMobileSearchResults();
   };
 
+  const showMobileCategoryHome = () => {
+    catalogSection?.classList.remove("mobile-category-open");
+    if (mobileCategoryHome) mobileCategoryHome.hidden = false;
+    if (mobileCategoryResultsHeader) mobileCategoryResultsHeader.hidden = true;
+    if (mobileFilterToggle) mobileFilterToggle.setAttribute("aria-expanded", "false");
+    catalogControls?.classList.remove("filters-open");
+  };
+
+  const showMobileProductList = (title) => {
+    catalogSection?.classList.add("mobile-category-open");
+    if (mobileCategoryHome) mobileCategoryHome.hidden = true;
+    if (mobileCategoryResultsHeader) mobileCategoryResultsHeader.hidden = false;
+    if (mobileCategoryTitle) mobileCategoryTitle.textContent = title;
+  };
+
+  const closeMobileSearch = ({ restoreFocus = false } = {}) => {
+    const wasOpen = mobileSearchOverlay?.classList.contains("is-open");
+    mobileSearchOverlay?.classList.remove("is-open");
+    mobileSearchOverlay?.setAttribute("aria-hidden", "true");
+    if (mobileSearchOverlay) mobileSearchOverlay.inert = true;
+    document.body.classList.remove("mobile-search-active");
+    storeHeader?.classList.remove("is-search-open");
+    compactSearchToggles.forEach((button) => button.setAttribute("aria-expanded", "false"));
+    if (wasOpen) {
+      state.searchQuery = "";
+      if (searchInputMobile) searchInputMobile.value = "";
+      if (state.mobileCategoryGroupId) showMobileProductList(mobileCategoryGroups.get(state.mobileCategoryGroupId)?.label || "Productos");
+      else showMobileCategoryHome();
+      applyFilters();
+      if (restoreFocus) document.querySelector(".mobile-search-toggle")?.focus({ preventScroll: true });
+    }
+  };
+
+  const openMobileSearch = () => {
+    if (!mobileSearchOverlay) return;
+    state.mobileCategoryGroupId = null;
+    state.selectedCategory = "all";
+    state.selectedBrand = "all";
+    state.searchQuery = "";
+    state.onlySale = false;
+    if (searchInputMobile) searchInputMobile.value = "";
+    if (brandSelect) brandSelect.value = "all";
+    if (saleOnlyCheckbox) saleOnlyCheckbox.checked = false;
+    updateCategoryControls("all");
+    showMobileCategoryHome();
+    mobileSearchOverlay.inert = false;
+    mobileSearchOverlay.setAttribute("aria-hidden", "false");
+    mobileSearchOverlay.classList.add("is-open");
+    document.body.classList.add("mobile-search-active");
+    compactSearchToggles.forEach((button) => button.setAttribute("aria-expanded", String(button.classList.contains("mobile-search-toggle"))));
+    applyFilters();
+    searchInputMobile?.focus({ preventScroll: true });
+  };
+
+  mobileSearchClose?.addEventListener("click", () => closeMobileSearch({ restoreFocus: true }));
+  mobileSearchClear?.addEventListener("click", () => {
+    if (!searchInputMobile) return;
+    searchInputMobile.value = "";
+    handleSearch("");
+    searchInputMobile.focus({ preventScroll: true });
+  });
+
+  const openMobileCategory = (groupId) => {
+    const group = mobileCategoryGroups.get(groupId);
+    if (!group) return;
+
+    state.mobileCategoryGroupId = group.id;
+    state.selectedCategory = group.category;
+    state.selectedBrand = "all";
+    state.searchQuery = "";
+    state.onlySale = false;
+    if (searchInput) searchInput.value = "";
+    if (searchInputMobile) searchInputMobile.value = "";
+    brandSelect.value = "all";
+    saleOnlyCheckbox.checked = false;
+    updateCategoryControls(group.category);
+    closeMobileSearch();
+    showMobileProductList(group.label);
+    animateNextCategoryRender = true;
+    applyFilters();
+  };
+
+  mobileCategoryGrid?.addEventListener("click", (event) => {
+    const card = event.target.closest("[data-mobile-category]");
+    if (card) openMobileCategory(card.getAttribute("data-mobile-category"));
+  });
+
+  mobileCategoryBack?.addEventListener("click", () => {
+    state.mobileCategoryGroupId = null;
+    state.selectedCategory = "all";
+    state.selectedBrand = "all";
+    state.searchQuery = "";
+    state.onlySale = false;
+    state.sortBy = "featured";
+    if (searchInput) searchInput.value = "";
+    if (searchInputMobile) searchInputMobile.value = "";
+    brandSelect.value = "all";
+    sortSelect.value = "featured";
+    saleOnlyCheckbox.checked = false;
+    updateCategoryControls("all");
+    showMobileCategoryHome();
+    closeMobileSearch();
+    applyFilters();
+    mobileCategoryHome?.scrollIntoView({ behavior: prefersReducedMotion ? "instant" : "smooth", block: "start" });
+  });
+
   // 4. Modal de Detalle Interactivo con animación suave Anime.js
-  const openProductModal = (productId) => {
+  const flyProductImage = (fromElement, toElement) => {
+    if (prefersReducedMotion || !fromElement?.isConnected || !toElement?.isConnected) return;
+    const flightElement = modalImageFlight?.clone || fromElement;
+    const fromBounds = flightElement.getBoundingClientRect();
+    const toBounds = toElement.getBoundingClientRect();
+    if (!fromBounds.width || !toBounds.width) return;
+
+    let clone = modalImageFlight?.clone;
+    if (modalImageFlight) {
+      modalImageFlight.animation.cancel();
+      clone.style.left = `${fromBounds.left}px`;
+      clone.style.top = `${fromBounds.top}px`;
+      clone.style.width = `${fromBounds.width}px`;
+      clone.style.height = `${fromBounds.height}px`;
+      clone.style.transform = "none";
+    } else {
+      clone = flightElement.cloneNode(false);
+      clone.removeAttribute("id");
+      clone.alt = "";
+      clone.setAttribute("aria-hidden", "true");
+      clone.src = flightElement.currentSrc || flightElement.src;
+      Object.assign(clone.style, {
+        position: "fixed",
+        zIndex: "80",
+        left: `${fromBounds.left}px`,
+        top: `${fromBounds.top}px`,
+        width: `${fromBounds.width}px`,
+        height: `${fromBounds.height}px`,
+        margin: "0",
+        objectFit: "cover",
+        borderRadius: "16px",
+        pointerEvents: "none",
+        transformOrigin: "top left",
+        willChange: "transform"
+      });
+      document.body.append(clone);
+    }
+
+    modalMainImg.style.opacity = "0";
+    const dx = toBounds.left - fromBounds.left;
+    const dy = toBounds.top - fromBounds.top;
+    const scale = toBounds.width / fromBounds.width;
+    const animation = clone.animate(
+      [
+        { transform: "translate3d(0, 0, 0) scale(1)" },
+        { transform: `translate3d(${dx}px, ${dy}px, 0) scale(${scale})` }
+      ],
+      { duration: 300, easing: "cubic-bezier(0.32, 0.72, 0, 1)" }
+    );
+    modalImageFlight = { clone, animation };
+    animation.onfinish = () => {
+      if (modalImageFlight?.animation !== animation) return;
+      clone.remove();
+      modalImageFlight = null;
+      modalMainImg.style.opacity = "";
+    };
+    animation.oncancel = () => {
+      if (modalImageFlight?.animation === animation) modalImageFlight = null;
+    };
+  };
+
+  const openProductModal = (productId, originImage = null) => {
     const prod = state.products.find((p) => p.id === productId);
     if (!prod) return;
+
+    if (modalImageFlight) {
+      modalImageFlight.animation.cancel();
+      modalImageFlight.clone.remove();
+      modalImageFlight = null;
+    }
+    modalMainImg.style.opacity = "";
+    modalOriginImage = originImage;
 
     state.activeProduct = prod;
     state.selectedSize = prod.sizes[0];
@@ -473,6 +839,16 @@ document.addEventListener("DOMContentLoaded", () => {
     modalCategoryBadge.textContent = prod.category.toUpperCase();
     modalBrand.textContent = prod.brand;
     modalSku.textContent = `CÓD: ${prod.id}`;
+    modalGender.textContent = prod.gender || "";
+    modalGender.hidden = !prod.gender;
+    modalStockStatus.textContent = prod.stockStatus || "Consultar disponibilidad";
+    modalStockStatus.classList.toggle("is-low-stock", /últimas|pocas/i.test(prod.stockStatus || ""));
+    const unavailable = /agotado|sin stock|no disponible/i.test(prod.stockStatus || "");
+    modalStockStatus.classList.toggle("is-unavailable", unavailable);
+    const isMobileView = window.matchMedia("(max-width: 767px)").matches;
+    btnModalWhatsappLabel.textContent = unavailable
+      ? "Consultar disponibilidad"
+      : isMobileView ? "Cotizar por WhatsApp" : "Pedir por WhatsApp";
     modalTitle.textContent = prod.name;
     modalPriceCurrent.textContent = formatPrice(prod.offerPrice);
     modalPriceRegular.textContent = prod.onSale ? formatPrice(prod.regularPrice) : "";
@@ -481,8 +857,11 @@ document.addEventListener("DOMContentLoaded", () => {
     modalTotalDisplay.textContent = formatPrice(prod.offerPrice);
 
     // Galería
-    modalMainImg.removeAttribute("src");
-    if (prod.images?.[0]) modalMainImg.src = prod.images[0];
+    const primaryImage = prod.id === "sauvage-extrain-ef27ec" && prod.images?.[0]?.startsWith("https://www.bing.com/images/search")
+      ? "/assets/products/sauvage-extrain.jpg"
+      : prod.images?.[0] || "assets/logo.png";
+    modalMainImg.src = primaryImage;
+    modalMainImg.alt = prod.name;
     modalThumbs.innerHTML = prod.images
       .map(
         (img, idx) => `
@@ -596,27 +975,58 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.style.overflow = "hidden";
     modalCloseBtn.focus();
 
-    // Animación de apertura suave del modal con Anime.js
-    if (!prefersReducedMotion) {
-      animate(".modal-content-box", {
-        scale: [0.94, 1],
-        opacity: [0, 1],
-        y: [20, 0],
-        duration: 320,
-        ease: "outCubic"
-      });
-    }
+    if (originImage) flyProductImage(originImage, modalMainImg);
   };
 
   const closeProductModal = () => {
+    const imageOrigin = modalOriginImage;
+    if (imageOrigin?.isConnected && !prefersReducedMotion) {
+      flyProductImage(modalImageFlight?.clone || modalMainImg, imageOrigin);
+    } else if (modalImageFlight) {
+      modalImageFlight.animation.cancel();
+      modalImageFlight.clone.remove();
+      modalImageFlight = null;
+      modalMainImg.style.opacity = "";
+    }
     productModal.classList.remove("active");
     productModal.setAttribute("aria-hidden", "true");
     productModal.inert = true;
     document.body.style.overflow = "";
     state.activeProduct = null;
+    modalOriginImage = null;
     if (previouslyFocusedElement instanceof HTMLElement) previouslyFocusedElement.focus();
     previouslyFocusedElement = null;
   };
+
+  mobileSearchSuggestions?.addEventListener("click", (event) => {
+    const suggestion = event.target.closest("[data-search-suggestion]");
+    if (!suggestion || !searchInputMobile) return;
+    searchInputMobile.value = suggestion.getAttribute("data-search-suggestion");
+    handleSearch(searchInputMobile.value);
+    searchInputMobile.focus({ preventScroll: true });
+  });
+  mobileSearchResults?.addEventListener("click", (event) => {
+    const imageButton = event.target.closest(".product-image-trigger");
+    if (imageButton) {
+      openProductModal(imageButton.getAttribute("data-id"), imageButton.querySelector("img"));
+      return;
+    }
+    const detailButton = event.target.closest(".btn-open-detail");
+    if (detailButton) {
+      openProductModal(detailButton.getAttribute("data-id"));
+      return;
+    }
+    const whatsappButton = event.target.closest(".btn-quick-wa");
+    if (whatsappButton) {
+      const product = state.products.find((item) => item.id === whatsappButton.getAttribute("data-id"));
+      if (product) sendDirectWhatsApp(product, product.sizes[0], product.colors[0]?.name || "Estándar", 1);
+      return;
+    }
+    if (event.target.closest("#mobileSearchResetFilters")) {
+      if (searchInputMobile) searchInputMobile.value = "";
+      handleSearch("");
+    }
+  });
 
   // Contador numérico suave con Anime.js al cambiar cantidad
   const updateModalTotal = () => {
@@ -859,7 +1269,9 @@ document.addEventListener("DOMContentLoaded", () => {
       ? productModal
       : cartDrawerOverlay.classList.contains("active")
         ? cartDrawerOverlay.querySelector('[role="dialog"]')
-        : null;
+        : mobileSearchOverlay?.classList.contains("is-open")
+          ? mobileSearchOverlay
+          : null;
     if (!activeDialog) return;
 
     if (event.key === "Escape") {
@@ -926,16 +1338,16 @@ ${itemsText}
       tab.classList.toggle("active", selected);
       tab.classList.toggle("font-black", selected);
       tab.classList.toggle("text-neutral-950", selected);
-      tab.classList.toggle("border-neutral-950", selected);
       tab.classList.toggle("text-neutral-500", !selected && category !== "ofertas");
-      tab.classList.toggle("border-transparent", !selected);
       tab.setAttribute("aria-pressed", String(selected));
     });
     if (categorySelectMobile) categorySelectMobile.value = category;
+    moveCategoryIndicator(true);
   };
 
   const setCategory = (category) => {
     animateNextCategoryRender = state.selectedCategory !== category;
+    state.mobileCategoryGroupId = null;
     state.selectedCategory = category;
     updateCategoryControls(category);
     applyFilters();
@@ -951,7 +1363,6 @@ ${itemsText}
   };
 
   const changeCategory = (category, scrollBehavior) => {
-    updateCategoryControls(category);
     scrollToCatalog(scrollBehavior);
     setCategory(category);
   };
@@ -961,6 +1372,11 @@ ${itemsText}
       const behavior = event.detail > 0 && !prefersReducedMotion ? "smooth" : "instant";
       changeCategory(tab.getAttribute("data-category"), behavior);
     });
+  });
+  mobileFilterToggle?.addEventListener("click", () => {
+    const open = mobileFilterToggle.getAttribute("aria-expanded") !== "true";
+    mobileFilterToggle.setAttribute("aria-expanded", String(open));
+    catalogControls?.classList.toggle("filters-open", open);
   });
   let mobileCategoryPointerActivation = false;
   categorySelectMobile?.addEventListener("pointerdown", () => { mobileCategoryPointerActivation = true; }, { passive: true });
@@ -993,6 +1409,10 @@ ${itemsText}
     state.searchQuery = val;
     if (searchInput) searchInput.value = val;
     if (searchInputMobile) searchInputMobile.value = val;
+    if (window.matchMedia("(max-width: 767px)").matches && !state.mobileCategoryGroupId) {
+      if (val.trim()) showMobileProductList("Resultados");
+      else showMobileCategoryHome();
+    }
     applyFilters();
   };
 
@@ -1015,6 +1435,7 @@ ${itemsText}
 
   // Función para reiniciar todos los filtros e ir al inicio
   const resetAllFilters = () => {
+    state.mobileCategoryGroupId = null;
     state.selectedCategory = "all";
     if (categorySelectMobile) categorySelectMobile.value = "all";
     state.selectedBrand = "all";
@@ -1027,17 +1448,11 @@ ${itemsText}
     brandSelect.value = "all";
     sortSelect.value = "featured";
     saleOnlyCheckbox.checked = false;
+    if (mobileFilterToggle) mobileFilterToggle.setAttribute("aria-expanded", "false");
+    catalogControls?.classList.remove("filters-open");
+    showMobileCategoryHome();
 
-    categoryTabs.forEach((t) => {
-      t.classList.remove("active", "text-neutral-950", "font-black", "border-neutral-950");
-      t.classList.add("text-neutral-500", "border-transparent");
-      t.setAttribute("aria-pressed", "false");
-    });
-    if (categoryTabs.length > 0) {
-      categoryTabs[0].classList.add("active", "text-neutral-950", "font-black", "border-neutral-950");
-      categoryTabs[0].classList.remove("text-neutral-500", "border-transparent");
-      categoryTabs[0].setAttribute("aria-pressed", "true");
-    }
+    updateCategoryControls("all");
 
     applyFilters();
   };
@@ -1084,8 +1499,10 @@ ${itemsText}
           const bounds = heroSection.getBoundingClientRect();
           const x = Math.max(-1, Math.min(1, ((pendingPointer.clientX - bounds.left) / bounds.width) * 2 - 1));
           const y = Math.max(-1, Math.min(1, ((pendingPointer.clientY - bounds.top) / bounds.height) * 2 - 1));
-          heroLogo.style.setProperty("--logo-tilt-x", `${-y * 6}deg`);
-          heroLogo.style.setProperty("--logo-tilt-y", `${x * 8}deg`);
+          heroLogo.style.setProperty("--logo-tilt-x", `${-y * 12}deg`);
+          heroLogo.style.setProperty("--logo-tilt-y", `${x * 14}deg`);
+          heroLogo.style.setProperty("--logo-shift-x", `${x * 14}px`);
+          heroLogo.style.setProperty("--logo-shift-y", `${y * 12}px`);
         };
         heroSection.addEventListener("pointermove", (event) => {
           if (event.pointerType !== "mouse") return;
@@ -1098,6 +1515,8 @@ ${itemsText}
           heroLogo.classList.add("is-returning");
           heroLogo.style.setProperty("--logo-tilt-x", "0deg");
           heroLogo.style.setProperty("--logo-tilt-y", "0deg");
+          heroLogo.style.setProperty("--logo-shift-x", "0px");
+          heroLogo.style.setProperty("--logo-shift-y", "0px");
         }, { passive: true });
       }
     }
@@ -1113,6 +1532,7 @@ ${itemsText}
     } catch {
       // El catálogo local de respaldo permite abrir la versión estática.
     }
+    renderMobileCategoryCards();
     initBrandFilter();
     applyFilters();
     updateCartBadge();

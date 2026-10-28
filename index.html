@@ -6,6 +6,7 @@
   <title>Diversas Marcas | Ropa, Calzado, Perfumes y Accesorios • Tepic, Nayarit</title>
   <meta name="description" content="Boutique multimarca en Tepic, Nayarit. Perfumería, calzado, ropa y accesorios para distintos estilos, con atención en Tepic y envíos a todo México. Cotiza y haz tu pedido por WhatsApp." />
   <meta name="keywords" content="Diversas Marcas, Tepic Nayarit, perfumes Tepic, tenis Nike Adidas, ropa Tommy Hilfiger, perfumes Carolina Herrera, Dior Sauvage, Ray-Ban" />
+  <meta name="theme-color" content="#ffffff" />
   <link rel="icon" type="image/png" href="assets/logo.png" />
 
   <!-- Tipografía editorial y funcional: Playfair Display + Inter -->
@@ -15,10 +16,10 @@
   <!-- Estilos del sistema visual -->
   <link rel="stylesheet" href="css/style.css" />
 </head>
-<body class="bg-[#faf8f5] text-neutral-900 font-sans antialiased min-h-screen flex flex-col selection:bg-neutral-900 selection:text-white">
+<body class="bg-white text-brand-black font-sans antialiased min-h-screen flex flex-col selection:bg-neutral-900 selection:text-white">
 
   <!-- ================= BARRA SUPERIOR DE ANUNCIOS ================= -->
-  <aside class="block bg-brand-black text-neutral-300 text-[10px] sm:text-xs py-2 border-b border-neutral-800">
+  <aside class="announcement-bar block bg-brand-black text-neutral-300 text-[10px] sm:text-xs py-2 border-b border-neutral-800">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap justify-between items-center gap-2">
       <div class="flex items-center gap-2 tracking-wide font-medium">
         <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -69,7 +70,7 @@
 
         <!-- Acceso a la bolsa -->
         <div id="headerActions" class="header-actions flex items-center gap-3 shrink-0">
-          <button class="compact-search-toggle mobile-search-toggle" type="button" aria-label="Abrir búsqueda" aria-controls="searchInputMobile" aria-expanded="false">
+          <button class="compact-search-toggle mobile-search-toggle" type="button" aria-label="Abrir búsqueda" aria-controls="mobileSearchOverlay" aria-expanded="false">
             <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
           </button>
           <button class="min-h-[44px] min-w-[44px] flex items-center gap-2 px-3.5 py-2 rounded-md border border-neutral-300 bg-white hover:border-neutral-950 text-neutral-900 text-xs font-display font-bold uppercase tracking-wider transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950" id="openCartBtn" title="Ver mi bolsa de pedido" aria-haspopup="dialog" aria-controls="cartDrawerOverlay" aria-expanded="false">
@@ -80,75 +81,69 @@
         </div>
       </div>
 
-      <!-- Buscador móvil en pantalla pequeña -->
-      <div id="mobileSearchWrap" class="header-search-mobile pb-3 md:hidden">
-        <div class="relative w-full">
-          <label class="sr-only" for="searchInputMobile">Buscar en el catálogo</label>
-          <input 
-            type="search" 
-            id="searchInputMobile" 
-              class="min-h-[44px] w-full pl-9 pr-4 py-2 border border-neutral-300 rounded text-sm tracking-wide text-neutral-900 placeholder:text-neutral-500 focus:outline-none focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950 transition-colors bg-white"
-            placeholder="Buscar perfumes, tenis, ropa o marcas..." 
-            autocomplete="off" 
-          />
-          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 text-xs"></i>
-        </div>
-      </div>
-
-      <!-- Barra de navegación por categorías -->
-      <label class="sr-only" for="categorySelectMobile">Filtrar por categoría</label>
-      <select id="categorySelectMobile" class="md:hidden mb-2 min-h-[45px] w-full rounded-md border border-neutral-300 bg-white px-3 text-sm font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950">
-        <option value="all">Todas las categorías</option>
-        <option value="Perfumes">Perfumes</option><option value="Calzado">Calzado</option>
-        <option value="Ropa">Ropa</option><option value="Accesorios">Accesorios y lentes</option>
-        <option value="ofertas">Ofertas</option>
-      </select>
-      <nav class="hidden md:flex border-t border-neutral-100 py-2.5 items-center justify-center gap-2 sm:gap-4 text-xs font-display font-bold tracking-[0.12em]" aria-label="Categorías">
-        <button aria-pressed="true" class="category-tab-btn active min-h-[44px] px-3.5 py-2 rounded transition-colors text-neutral-950 font-black border-b-2 border-neutral-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950" data-category="all">
+      <!-- Navegación de categorías de escritorio -->
+      <nav class="category-nav hidden md:flex border-t border-neutral-100 py-2.5 items-center justify-center gap-2 sm:gap-4 text-xs font-display font-bold tracking-[0.12em]" aria-label="Categorías">
+        <button aria-pressed="true" class="category-tab-btn active min-h-[44px] px-3.5 py-2 transition-colors text-neutral-950 font-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950" data-category="all">
           TODOS
         </button>
-        <button aria-pressed="false" class="category-tab-btn min-h-[44px] px-3.5 py-2 rounded transition-colors text-neutral-500 hover:text-neutral-950 border-b-2 border-transparent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950" data-category="Perfumes">
+        <button aria-pressed="false" class="category-tab-btn min-h-[44px] px-3.5 py-2 transition-colors text-neutral-500 hover:text-neutral-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950" data-category="Perfumes">
           <i class="fa-solid fa-spray-can-sparkles mr-1" aria-hidden="true"></i> PERFUMES
         </button>
-        <button aria-pressed="false" class="category-tab-btn min-h-[44px] px-3.5 py-2 rounded transition-colors text-neutral-500 hover:text-neutral-950 border-b-2 border-transparent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950" data-category="Calzado">
+        <button aria-pressed="false" class="category-tab-btn min-h-[44px] px-3.5 py-2 transition-colors text-neutral-500 hover:text-neutral-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950" data-category="Calzado">
           <i class="fa-solid fa-shoe-prints mr-1" aria-hidden="true"></i> CALZADO
         </button>
-        <button aria-pressed="false" class="category-tab-btn min-h-[44px] px-3.5 py-2 rounded transition-colors text-neutral-500 hover:text-neutral-950 border-b-2 border-transparent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950" data-category="Ropa">
+        <button aria-pressed="false" class="category-tab-btn min-h-[44px] px-3.5 py-2 transition-colors text-neutral-500 hover:text-neutral-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950" data-category="Ropa">
           <i class="fa-solid fa-shirt mr-1" aria-hidden="true"></i> ROPA
         </button>
-        <button aria-pressed="false" class="category-tab-btn min-h-[44px] px-3.5 py-2 rounded transition-colors text-neutral-500 hover:text-neutral-950 border-b-2 border-transparent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950" data-category="Accesorios">
+        <button aria-pressed="false" class="category-tab-btn min-h-[44px] px-3.5 py-2 transition-colors text-neutral-500 hover:text-neutral-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950" data-category="Accesorios">
           <i class="fa-solid fa-glasses mr-1" aria-hidden="true"></i> ACCESORIOS & LENTES
         </button>
-        <button aria-pressed="false" class="category-tab-btn min-h-[44px] px-3.5 py-2 rounded transition-colors text-red-700 hover:text-red-800 border-b-2 border-transparent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950" data-category="ofertas">
+        <button aria-pressed="false" class="category-tab-btn min-h-[44px] px-3.5 py-2 transition-colors text-red-700 hover:text-red-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950" data-category="ofertas">
           <i class="fa-solid fa-fire mr-1" aria-hidden="true"></i> OFERTAS
         </button>
+        <span class="category-active-indicator" aria-hidden="true"></span>
       </nav>
 
     </div>
   </header>
 
+  <section id="mobileSearchOverlay" class="mobile-search-overlay" aria-label="Búsqueda de productos" role="dialog" aria-modal="true" aria-hidden="true" inert>
+    <div class="mobile-search-topbar">
+      <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+      <label class="sr-only" for="searchInputMobile">Buscar productos</label>
+      <input id="searchInputMobile" type="search" placeholder="Buscar" autocomplete="off" enterkeyhint="search" />
+      <button id="mobileSearchClear" type="button" class="mobile-search-clear" aria-label="Borrar búsqueda" hidden>Borrar</button>
+      <button id="mobileSearchClose" type="button" class="mobile-search-close" aria-label="Cerrar búsqueda"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+    </div>
+    <div class="mobile-search-content">
+      <div id="mobileSearchSuggestions" class="mobile-search-suggestions" aria-label="Sugerencias de búsqueda" hidden></div>
+      <h2>Productos</h2>
+      <div id="mobileSearchResults" class="mobile-search-results-grid" aria-live="polite"></div>
+    </div>
+  </section>
+
   <!-- ================= HERO EDITORIAL CON ALTA IDENTIDAD ================= -->
-  <section class="hero-section relative bg-[#0d0e12] text-white border-b border-brand-gold overflow-hidden py-8 md:py-12">
+  <section class="hero-section relative bg-brand-black text-white border-b border-neutral-800 overflow-hidden py-8 md:py-12">
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-10 items-center">
         
         <!-- Texto Editorial -->
         <div class="lg:col-span-8 text-center lg:text-left space-y-3">
-          <div class="inline-flex items-center gap-2 border border-brand-gold/60 rounded px-3 py-1 bg-white/5 text-[11px] font-display font-bold uppercase tracking-[0.18em] text-[#f4dfaa]">
+          <div class="inline-flex items-center gap-2 border border-neutral-700 rounded px-3 py-1 bg-white/5 text-[11px] font-display font-bold uppercase tracking-[0.18em] text-white">
             <i class="fa-solid fa-gem text-brand-gold text-[10px]"></i>
             <span>Tepic, Nayarit · Envíos a todo México</span>
           </div>
 
           <h1 class="font-editorial font-semibold text-3xl sm:text-5xl lg:text-6xl tracking-tight text-white leading-[1.05]">
-            Encuentra tu estilo,<br class="hidden sm:block" /> <span class="text-brand-gold">cerca de ti.</span>
+            Encuentra tu estilo,<br class="hidden sm:block" /> cerca de ti.
           </h1>
 
           <p class="text-neutral-300 text-sm sm:text-base max-w-2xl leading-relaxed mx-auto lg:mx-0">
             Encuentra perfumes, calzado, ropa y accesorios. Te ayudamos a elegir y pedir por WhatsApp.
           </p>
 
-          <a href="#catalogoSection" class="inline-flex min-h-[44px] items-center justify-center rounded-md bg-brand-gold px-5 py-2 text-sm font-bold text-brand-black transition-colors hover:bg-[#d4b574] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">Explorar catálogo</a>
+          <a href="#catalogoSection" class="inline-flex min-h-[44px] items-center justify-center rounded-md bg-white px-5 py-2 text-sm font-bold text-brand-black transition-colors hover:bg-neutral-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">Explorar catálogo</a>
         </div>
 
         <!-- Escaparate del Emblema Oficial con circunferencia perfecta -->
@@ -166,12 +161,12 @@
   </section>
 
   <!-- ================= BARRA DE BENEFICIOS ================= -->
-  <section class="bg-white border-b border-neutral-200 py-5">
+  <section class="benefits-section bg-white border-b border-neutral-200 py-5">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 text-center sm:text-left">
         
         <div class="flex items-center gap-3 justify-center sm:justify-start p-2">
-          <div class="w-10 h-10 rounded border border-neutral-200 bg-[#faf8f5] flex items-center justify-center text-neutral-950 text-sm shrink-0">
+          <div class="w-10 h-10 rounded border border-neutral-200 bg-neutral-50 flex items-center justify-center text-neutral-950 text-sm shrink-0">
             <i class="fa-solid fa-certificate text-brand-gold"></i>
           </div>
           <div>
@@ -181,7 +176,7 @@
         </div>
 
         <div class="flex items-center gap-3 justify-center sm:justify-start p-2">
-          <div class="w-10 h-10 rounded border border-neutral-200 bg-[#faf8f5] flex items-center justify-center text-neutral-950 text-sm shrink-0">
+          <div class="w-10 h-10 rounded border border-neutral-200 bg-neutral-50 flex items-center justify-center text-neutral-950 text-sm shrink-0">
             <i class="fa-solid fa-location-dot text-brand-gold"></i>
           </div>
           <div>
@@ -190,7 +185,7 @@
           </div>
         </div>
         <div class="flex items-center gap-3 justify-center sm:justify-start p-2">
-          <div class="w-10 h-10 rounded border border-neutral-200 bg-[#faf8f5] flex items-center justify-center text-neutral-950 text-sm shrink-0">
+          <div class="w-10 h-10 rounded border border-neutral-200 bg-neutral-50 flex items-center justify-center text-neutral-950 text-sm shrink-0">
             <i class="fa-solid fa-spray-can-sparkles text-brand-gold"></i>
           </div>
           <div>
@@ -208,33 +203,52 @@
   <!-- ================= SECCIÓN DE CATÁLOGO ================= -->
   <main class="flex-1 py-10 md:py-14" id="catalogoSection">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      
+      <section class="mobile-category-home" aria-labelledby="mobileCategoryHeading">
+        <h2 id="mobileCategoryHeading" class="mobile-scroll-reveal">Explora categorías</h2>
+        <div class="mobile-category-grid" id="mobileCategoryGrid" aria-live="polite"></div>
+      </section>
+
+      <div class="mobile-category-results-header" id="mobileCategoryResultsHeader" hidden>
+        <button type="button" class="mobile-category-back" id="mobileCategoryBack" aria-label="Volver a las categorías">
+          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+        </button>
+        <div class="mobile-category-results-title">
+          <h2 id="mobileCategoryTitle">Perfumes</h2>
+          <p id="mobileCategoryCount" aria-live="polite"></p>
+        </div>
+        <button type="button" class="mobile-filter-toggle" id="mobileFilterToggle" aria-expanded="false" aria-controls="catalogAdvancedFilters">
+          <i class="fa-solid fa-sliders" aria-hidden="true"></i><span>Filtros</span>
+        </button>
+      </div>
+
       <!-- Encabezado de Catálogo y Filtros -->
         <div class="catalog-controls flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-neutral-300">
-        <div>
+        <div class="catalog-heading-wrapper">
           <div class="inline-block border border-neutral-300 px-2.5 py-0.5 rounded-md text-xs font-display font-bold text-neutral-800 mb-1.5 bg-white">
             CATÁLOGO OFICIAL • DIVERSAS MARCAS
           </div>
           <h2 class="font-display font-black text-2xl sm:text-3xl tracking-tight text-neutral-950">
-            Productos disponibles
+            Catálogo
           </h2>
           <p class="text-sm text-neutral-700 mt-1">Precios en pesos mexicanos (MXN). Consulta por WhatsApp.</p>
         </div>
 
         <!-- Controles de Filtros -->
-        <div class="flex flex-wrap items-center gap-3">
+        <div class="catalog-advanced-filters flex flex-wrap items-center gap-3" id="catalogAdvancedFilters">
           
           <!-- Filtro por marca -->
-          <div class="flex items-center gap-1.5">
+          <div class="catalog-select-control catalog-brand-select flex items-center gap-1.5">
             <label for="brandSelect" class="text-xs font-display font-bold text-neutral-700">Marca:</label>
+            <i class="fa-solid fa-tag catalog-filter-icon" aria-hidden="true"></i>
             <select id="brandSelect" class="min-h-[44px] border border-neutral-300 rounded px-2.5 py-2 text-sm font-semibold bg-white text-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-950">
               <option value="all">Todas las marcas</option>
             </select>
           </div>
 
           <!-- Selector de orden -->
-          <div class="flex items-center gap-1.5">
+          <div class="catalog-select-control catalog-sort-select flex items-center gap-1.5">
             <label for="sortSelect" class="text-xs font-display font-bold text-neutral-700">Ordenar:</label>
+            <i class="fa-solid fa-arrow-down-wide-short catalog-filter-icon" aria-hidden="true"></i>
             <select id="sortSelect" class="min-h-[44px] border border-neutral-300 rounded px-2.5 py-2 text-sm font-semibold bg-white text-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-950">
               <option value="featured">Destacados</option>
               <option value="price-asc">Precio: Menor a Mayor</option>
@@ -245,8 +259,9 @@
           </div>
 
           <!-- Solo ofertas -->
-          <label class="min-h-[44px] flex items-center gap-2 border border-red-200 bg-red-50 text-red-800 px-3 py-0 rounded text-sm font-bold cursor-pointer hover:bg-red-100 transition-colors">
-            <input type="checkbox" id="saleOnlyCheckbox" />
+          <label class="catalog-offers-toggle min-h-[44px] flex items-center gap-2 border border-red-200 bg-red-50 text-red-800 px-3 py-0 rounded text-sm font-bold cursor-pointer hover:bg-red-100 transition-colors" title="Filtrar solo productos en oferta">
+            <input type="checkbox" id="saleOnlyCheckbox" class="catalog-offers-checkbox" />
+            <i class="fa-solid fa-fire catalog-filter-icon" aria-hidden="true"></i>
             <span>Solo ofertas</span>
           </label>
 
@@ -265,95 +280,75 @@
   </main>
 
   <!-- ================= MODAL INTERACTIVO DE DETALLE (ESTILO IMAGEN 2) ================= -->
-  <div class="modal-overlay fixed inset-0 bg-neutral-950/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300" id="productModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalDesc" aria-hidden="true" inert tabindex="-1">
-    <div class="modal-content-box bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[92vh] overflow-y-auto relative border border-neutral-200 transform translate-y-4 transition-transform duration-300">
-      
-      <!-- Botón de cerrar -->
-      <button class="absolute top-4 right-4 min-w-[44px] min-h-[44px] rounded-full border border-neutral-200 bg-white hover:bg-neutral-100 flex items-center justify-center text-neutral-600 hover:text-neutral-950 text-sm z-10 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950" id="modalCloseBtn" aria-label="Cerrar detalle del producto">
-        <i class="fa-solid fa-xmark"></i>
+  <div class="modal-overlay product-modal-overlay fixed inset-0 bg-neutral-950/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none" id="productModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalDesc" aria-hidden="true" inert tabindex="-1">
+    <section class="modal-content-box product-detail-panel" aria-label="Detalle del producto">
+      <button type="button" class="product-detail-close" id="modalCloseBtn" aria-label="Cerrar detalle del producto">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
       </button>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 p-6 md:p-8">
-        
-        <!-- Galería de fotos -->
-        <div class="space-y-4">
-          <div class="aspect-square bg-neutral-100 rounded border border-neutral-200 overflow-hidden flex items-center justify-center">
-            <img id="modalMainImg" alt="Producto" class="w-full h-full object-cover" />
+      <div class="product-detail-layout">
+        <div class="product-detail-gallery">
+          <div class="product-detail-image-wrap">
+            <img id="modalMainImg" alt="Producto" />
           </div>
-          <div class="flex gap-2 overflow-x-auto pb-1" id="modalThumbs"></div>
+          <div class="product-detail-thumbnails" id="modalThumbs" aria-label="Más fotografías del producto"></div>
         </div>
 
-        <!-- Información con la jerarquía de Imagen 2 -->
-        <div class="flex flex-col">
-          
-          <!-- Badge de categoría estilo Imagen 2: [FRAGRANCE] -->
-          <div class="flex items-center justify-between mb-2">
-            <span class="inline-block border border-neutral-300 px-3 py-1 rounded text-[11px] font-display font-bold uppercase tracking-[0.16em] text-neutral-700 bg-neutral-50" id="modalCategoryBadge">
-              FRAGRANCE
-            </span>
-            <span class="text-xs font-mono font-medium text-neutral-600" id="modalSku">CÓD: 001</span>
+        <div class="product-detail-content">
+          <div class="product-detail-kicker">
+            <span id="modalCategoryBadge">Perfumes</span>
+            <span id="modalBrand">Marca</span>
+          </div>
+          <span class="sr-only" id="modalSku">Identificador del producto</span>
+          <h2 class="product-detail-title" id="modalTitle">Nombre del producto</h2>
+
+          <div class="product-detail-price-row">
+            <span class="product-detail-price" id="modalPriceCurrent">$0 MXN</span>
+            <span class="product-detail-regular-price" id="modalPriceRegular"></span>
           </div>
 
-          <!-- Título en negrita mayúscula exacta: ODYSSEY MANDARIN SKY -->
-          <h3 class="font-display font-black text-2xl md:text-3xl uppercase tracking-tight text-neutral-950 leading-tight mb-3" id="modalTitle">
-            NOMBRE DEL PRODUCTO
-          </h3>
-
-          <!-- Línea divisoria elegante -->
-          <div class="border-b border-neutral-200 pb-3 mb-4 flex items-baseline justify-between">
-            <div class="flex items-baseline gap-3">
-              <span class="font-display font-black text-2xl md:text-3xl text-neutral-950" id="modalPriceCurrent">$0.00 MXN</span>
-              <span class="text-sm font-bold text-neutral-400 line-through" id="modalPriceRegular"></span>
-            </div>
-            <span class="text-xs font-display font-bold uppercase tracking-wider text-neutral-950 bg-neutral-100 px-2.5 py-1 rounded-md border border-neutral-300" id="modalBrand">Marca</span>
+          <div class="product-detail-meta">
+            <span class="product-detail-gender" id="modalGender"></span>
+            <span class="product-detail-stock" id="modalStockStatus"></span>
           </div>
 
-          <!-- Descripción -->
-          <p class="text-neutral-600 text-xs md:text-sm leading-relaxed mb-5" id="modalDesc"></p>
+          <p class="product-detail-description" id="modalDesc"></p>
+          <div class="product-detail-options" id="modalSizesContainer"></div>
+          <div class="product-detail-options" id="modalColorsContainer"></div>
 
-          <!-- Selector de Tallas / Mililitros -->
-          <div class="mb-4" id="modalSizesContainer"></div>
-
-          <!-- Selector de Colores / Versiones -->
-          <div class="mb-4" id="modalColorsContainer"></div>
-
-          <!-- Selector de Cantidad -->
-          <div class="mb-5 flex items-center gap-3">
-            <span class="text-xs font-display font-bold uppercase tracking-wider text-neutral-700">Cantidad:</span>
-            <div class="inline-flex items-center border border-neutral-300 rounded overflow-hidden">
-              <button type="button" class="min-w-[44px] min-h-[44px] flex items-center justify-center bg-neutral-50 hover:bg-neutral-200 text-neutral-800 font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950" id="qtyMinusBtn" aria-label="Disminuir cantidad">−</button>
-              <span class="w-10 text-center font-bold text-xs" id="qtyDisplay">1</span>
-              <button type="button" class="min-w-[44px] min-h-[44px] flex items-center justify-center bg-neutral-50 hover:bg-neutral-200 text-neutral-800 font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950" id="qtyPlusBtn" aria-label="Aumentar cantidad">+</button>
+          <div class="product-detail-quantity">
+            <span>Cantidad</span>
+            <div class="product-quantity-control">
+              <button type="button" id="qtyMinusBtn" aria-label="Disminuir cantidad">−</button>
+              <span id="qtyDisplay">1</span>
+              <button type="button" id="qtyPlusBtn" aria-label="Aumentar cantidad">+</button>
             </div>
           </div>
 
-          <!-- Especificaciones de autenticidad -->
-          <div class="border border-neutral-200 bg-neutral-50/70 rounded p-3 mb-6">
-            <h5 class="text-[10px] font-display font-bold uppercase tracking-[0.16em] text-neutral-500 mb-2">Garantía & Especificaciones</h5>
-            <ul class="text-xs text-neutral-700 space-y-1.5" id="modalFeaturesList"></ul>
+          <div class="product-detail-specs">
+            <h3>Detalles del producto</h3>
+            <ul id="modalFeaturesList"></ul>
           </div>
 
-  <!-- Opciones para pedir y cotizar el producto -->
-          <div class="mt-auto pt-4 border-t border-neutral-200 space-y-2.5">
-            <div class="flex justify-between items-baseline mb-1">
-              <span class="text-xs font-bold uppercase tracking-wider text-neutral-500">Subtotal estimado:</span>
-              <span class="font-display font-black text-xl text-neutral-950" id="modalTotalDisplay">$0.00 MXN</span>
+          <div class="product-detail-purchase">
+            <div class="product-detail-subtotal">
+              <span>Subtotal estimado</span>
+              <strong id="modalTotalDisplay">$0 MXN</strong>
             </div>
-
-            <button type="button" class="min-h-[48px] w-full flex items-center justify-center gap-2 py-3 px-4 rounded bg-emerald-700 hover:bg-emerald-800 text-white font-display font-bold text-sm uppercase tracking-wider shadow transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800" id="btnModalWhatsapp">
-              <span>Pedir por WhatsApp</span>
-            </button>
-
-            <button type="button" class="min-h-[48px] w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-md border border-neutral-300 hover:border-neutral-950 bg-white text-neutral-900 font-display font-bold text-sm uppercase tracking-wider transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950" id="btnModalAddToCart">
-              <i class="fa-solid fa-bag-shopping"></i>
-              <span>Agregar a mi Bolsa de Pedido</span>
-            </button>
+            <div class="product-detail-actions">
+              <button type="button" id="btnModalWhatsapp" class="product-detail-whatsapp">
+                <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                <span id="btnModalWhatsappLabel">Pedir por WhatsApp</span>
+              </button>
+              <button type="button" id="btnModalAddToCart" class="product-detail-add">
+                <i class="fa-solid fa-bag-shopping" aria-hidden="true"></i>
+                <span>Agregar a la bolsa</span>
+              </button>
+            </div>
           </div>
-
         </div>
-
       </div>
-    </div>
+    </section>
   </div>
 
   <!-- ================= BOLSA DE PEDIDOS / CARRITO DRAWER ================= -->
@@ -399,12 +394,12 @@
   </nav>
 
   <!-- ================= PIE DE PÁGINA MINIMALISTA ================= -->
-  <footer class="bg-neutral-950 text-neutral-400 text-xs border-t border-neutral-800 pt-12 pb-8 mt-auto">
+  <footer class="bg-brand-black text-neutral-400 text-xs border-t border-neutral-800 pt-12 pb-8 mt-auto">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-8 pb-10 border-b border-neutral-800">
+      <div class="footer-content-grid grid grid-cols-1 md:grid-cols-4 gap-8 pb-10 border-b border-neutral-800">
         
         <!-- Info de la Marca -->
-        <div class="md:col-span-2 space-y-4">
+        <div class="footer-brand-block md:col-span-2 space-y-4">
           <a href="index.html" class="flex items-center gap-3" id="footerHomeLink" title="Ir al inicio de Diversas Marcas">
             <div class="footer-logo-frame">
               <img src="assets/logo.png" alt="Diversas Marcas" />
@@ -420,7 +415,7 @@
         </div>
 
         <!-- Enlaces rápidos -->
-        <div class="space-y-3">
+        <div class="footer-catalog-block space-y-3">
           <h4 class="font-display font-bold text-xs uppercase tracking-[0.16em] text-white">Catálogo</h4>
           <ul class="space-y-2 text-neutral-400 text-xs">
             <li><a href="#catalogoSection" class="inline-flex min-h-[44px] items-center gap-2 py-2 hover:text-white transition-colors"><i class="fa-solid fa-spray-can-sparkles" aria-hidden="true"></i> Perfumería fina</a></li>
@@ -432,18 +427,18 @@
         </div>
 
         <!-- Contacto -->
-        <div class="space-y-3">
-          <h4 class="font-display font-bold text-xs uppercase tracking-[0.16em] text-white">Contacto & Envíos</h4>
+        <div class="footer-contact-block mobile-scroll-reveal space-y-3">
+          <h4 class="font-display font-bold text-xs uppercase tracking-[0.16em] text-white">Contacto y envíos</h4>
           <ul class="space-y-2 text-neutral-400 text-xs">
-            <li><i class="fa-solid fa-location-dot text-brand-gold mr-1.5"></i> Tepic, Nayarit, México</li>
-            <li><i class="fa-solid fa-message text-emerald-500 mr-1.5"></i> Atención personalizada por mensaje</li>
-            <li><i class="fa-solid fa-truck text-sky-400 mr-1.5"></i> Envíos nacionales seguros</li>
+            <li class="footer-contact-item"><i class="fa-solid fa-location-dot text-brand-gold mr-1.5" aria-hidden="true"></i> Tepic, Nayarit, México</li>
+            <li class="footer-contact-item"><a class="footer-contact-link" href="https://wa.me/523111912342?text=%C2%A1Hola%20Diversas%20Marcas!%20%F0%9F%9B%8D%EF%B8%8F%20Quisiera%20consultar%20sobre%20su%20cat%C3%A1logo%20en%20Tepic." target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Atención por WhatsApp</a></li>
+            <li class="footer-contact-item"><i class="fa-solid fa-truck text-sky-400 mr-1.5" aria-hidden="true"></i> Envíos nacionales seguros</li>
           </ul>
         </div>
 
       </div>
 
-      <div class="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-neutral-400 text-[11px]">
+      <div class="footer-legal pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-neutral-400 text-[11px]">
         <p>© 2026 Diversas Marcas (DM) — Tepic, Nayarit. Todos los derechos reservados.</p>
         <p class="font-display font-semibold tracking-wider uppercase">Calidad • Estilo • Comodidad</p>
       </div>

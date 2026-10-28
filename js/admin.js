@@ -58,25 +58,29 @@ adminOverlay.innerHTML = `
           <button class="admin-close admin-form-close" type="button" id="adminFormClose" aria-label="Cerrar formulario">×</button>
         </header>
         <div class="admin-form-grid">
-          <label class="admin-field admin-field-wide">Nombre del producto<input class="admin-input" name="name" required maxlength="160" /></label>
+          <div class="admin-form-section-label admin-field-wide"><h4>Información del producto</h4><p>Estos datos identifican el artículo en la tarjeta y en su ficha de detalle.</p></div>
+          <label class="admin-field admin-field-wide">Nombre del producto<input class="admin-input" name="name" required maxlength="160" placeholder="Ej. Sauvage Extrait" /></label>
           <label class="admin-field">Marca<input class="admin-input" name="brand" required maxlength="100" /></label>
           <label class="admin-field">Categor?a<select class="admin-input" name="category" required><option value="">Elige una categor?a</option><option>Perfumes</option><option>Ropa</option><option>Calzado</option><option>Accesorios</option></select></label>
+          <div class="admin-form-section-label admin-field-wide"><h4>Precio y disponibilidad</h4><p>El precio de venta se muestra en la tienda; al activar “En oferta” también aparece el precio regular.</p></div>
           <label class="admin-field">Precio regular (MXN)<input class="admin-input" name="regularPrice" type="number" min="1" step="0.01" required /></label>
           <label class="admin-field">Precio de venta (MXN)<input class="admin-input" name="offerPrice" type="number" min="1" step="0.01" required /></label>
           <label class="admin-field">Público o género<input class="admin-input" name="gender" maxlength="40" placeholder="Unisex, Mujer, Hombre…" /></label>
-          <label class="admin-field">Disponibilidad<input class="admin-input" name="stockStatus" maxlength="80" placeholder="En stock" /></label>
+          <label class="admin-field">Disponibilidad<input class="admin-input" name="stockStatus" list="adminStockOptions" maxlength="80" placeholder="En stock" /><datalist id="adminStockOptions"><option value="En stock"><option value="Últimas unidades"><option value="Agotado"></datalist><span class="admin-field-help">Se muestra en los detalles. Escribe “Agotado” o “Sin stock” para indicar que no está disponible.</span></label>
+          <div class="admin-form-section-label admin-field-wide"><h4>Fotografías y variantes</h4><p>La primera foto será la portada y la imagen desde la que se abre el detalle.</p></div>
           <div class="admin-field admin-field-wide admin-upload-field"><span class="admin-field-label">Fotograf&#237;as del producto</span><label class="admin-upload-control" for="adminImageFiles"><span class="admin-upload-action">Seleccionar fotograf&#237;as</span><span>o arr&#225;stralas aqu&#237;</span><input id="adminImageFiles" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple /></label><span class="admin-field-help" id="adminImageHelp">Hasta 12 im&#225;genes JPG, PNG, WebP o GIF, m&#225;ximo 8 MB cada una. Se guardan en <code>product-images</code> dentro de <code>DATA_DIR</code> (por defecto, <code>data/product-images</code>).</span><p class="admin-image-status" id="adminImageStatus" role="status" aria-live="polite"></p><div class="admin-image-preview" id="adminImagePreview" aria-live="polite"></div></div>
           <div class="admin-field admin-field-wide" id="adminCategoryFields" hidden></div>
           <input type="hidden" name="categoryDetails" value="{}" />
-          <label class="admin-field">Tallas o presentaciones (una por l?nea)<textarea class="admin-input admin-textarea" name="sizes" rows="3" placeholder="100 ml&#10;150 ml"></textarea></label>
+          <label class="admin-field">Tallas o presentaciones (una por línea)<textarea class="admin-input admin-textarea" name="sizes" rows="3" placeholder="100 ml&#10;150 ml"></textarea><span class="admin-field-help">Se convierten en opciones seleccionables dentro de la ficha.</span></label>
           <label class="admin-field">Colores (Nombre | #HEX, uno por línea)<textarea class="admin-input admin-textarea" name="colors" rows="3" placeholder="Negro | #111827"></textarea></label>
-          <label class="admin-field admin-field-wide">Descripción<textarea class="admin-input admin-textarea" name="description" rows="3" maxlength="2000"></textarea></label>
-          <label class="admin-field admin-field-wide">Características (una por línea)<textarea class="admin-input admin-textarea" name="features" rows="3" maxlength="3000"></textarea></label>
+          <div class="admin-form-section-label admin-field-wide"><h4>Información de detalle</h4><p>Describe lo que el cliente necesita saber antes de pedir o agregar a su bolsa.</p></div>
+          <label class="admin-field admin-field-wide">Descripción<textarea class="admin-input admin-textarea" name="description" rows="3" maxlength="2000" placeholder="Describe el producto con información útil y concreta."></textarea></label>
+          <label class="admin-field admin-field-wide">Características (una por línea)<textarea class="admin-input admin-textarea" name="features" rows="3" maxlength="3000" placeholder="Contenido: 100 ml&#10;Acabado: mate"></textarea></label>
         </div>
         <fieldset class="admin-flags"><legend>Mostrar en el catálogo</legend>
           <label><input type="checkbox" name="onSale" /> En oferta</label>
           <label><input type="checkbox" name="isNew" /> Nuevo ingreso</label>
-          <label><input type="checkbox" name="featured" /> Destacado</label>
+          <label><input type="checkbox" name="featured" /> Destacado <span class="admin-flag-help">Muestra “Selección DM” en la foto.</span></label>
         </fieldset>
         <div class="admin-form-footer">
           <button class="admin-button admin-button-quiet" type="button" id="adminCancelForm">Cancelar</button>
