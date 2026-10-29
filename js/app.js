@@ -519,6 +519,16 @@ document.addEventListener("DOMContentLoaded", () => {
         break;
     }
 
+    // Mantén juntas las tarjetas de una misma marca sin cambiar su orden interno.
+    const productsByBrand = new Map();
+    result.forEach((product, index) => {
+      const normalizedBrand = normalizeCategoryKey(product.brand);
+      const groupKey = normalizedBrand ? `brand:${normalizedBrand}` : `without-brand:${index}`;
+      if (!productsByBrand.has(groupKey)) productsByBrand.set(groupKey, []);
+      productsByBrand.get(groupKey).push(product);
+    });
+    result = [...productsByBrand.values()].flat();
+
     state.filteredProducts = result;
     renderProducts();
   };
