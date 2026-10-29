@@ -89,8 +89,8 @@ adminOverlay.innerHTML = `
             <div class="admin-form-grid">
               <div class="admin-field admin-field-wide" id="adminCategoryFields" hidden></div>
               <input type="hidden" name="categoryDetails" value="{}" />
-              <label class="admin-field">Presentaciones<textarea class="admin-input admin-textarea" name="sizes" rows="2" placeholder="100 ml&#10;150 ml"></textarea><span class="admin-field-help">Una por línea; se muestran como opciones en el detalle.</span></label>
-              <label class="admin-field">Colores<textarea class="admin-input admin-textarea" name="colors" rows="2" placeholder="Negro | #111827"></textarea><span class="admin-field-help">Usa Nombre | #HEX, uno por línea.</span></label>
+              <div class="admin-field" id="adminPresentationChoices"><span>Presentaciones</span><input type="hidden" name="sizes" /><div class="admin-choice-grid" data-choice-group="presentation" aria-label="Presentaciones disponibles"></div><span class="admin-field-help">Selecciona una o varias opciones.</span></div>
+              <div class="admin-field" id="adminColorChoices"><span>Colores principales</span><input type="hidden" name="colors" /><div class="admin-color-grid" data-choice-group="color" aria-label="Colores del producto"></div><label class="admin-color-custom">Otro color<input type="color" id="adminCustomColor" value="#6b7280" aria-label="Elegir otro color" /></label><span class="admin-field-help">Puedes seleccionar varios colores.</span></div>
             </div>
           </section>
           <section class="admin-form-section" aria-labelledby="adminPriceTitle">
@@ -98,15 +98,15 @@ adminOverlay.innerHTML = `
             <div class="admin-form-grid">
               <label class="admin-field">Precio regular (MXN)<input class="admin-input" name="regularPrice" type="number" min="1" step="0.01" required placeholder="$0.00" /></label>
               <label class="admin-field">Precio de venta (MXN)<input class="admin-input" name="offerPrice" type="number" min="1" step="0.01" required placeholder="$0.00" /></label>
-              <label class="admin-field">Público o género<input class="admin-input" name="gender" maxlength="40" placeholder="Unisex, mujer, hombre…" /></label>
-              <label class="admin-field">Disponibilidad<input class="admin-input" name="stockStatus" list="adminStockOptions" maxlength="80" placeholder="En stock" /><datalist id="adminStockOptions"><option value="En stock"><option value="Últimas unidades"><option value="Agotado"></datalist><span class="admin-field-help">Se muestra en los detalles del producto.</span></label>
+              <label class="admin-field">Público o género<select class="admin-input" name="gender"><option value="">Sin especificar</option><option>Unisex</option><option>Mujer</option><option>Hombre</option></select></label>
+              <label class="admin-field">Disponibilidad<select class="admin-input" name="stockStatus"><option>En stock</option><option>Últimas unidades</option><option>Agotado</option></select><span class="admin-field-help">Se muestra en los detalles del producto.</span></label>
             </div>
           </section>
           <section class="admin-form-section" aria-labelledby="adminDetailTitle">
             <header class="admin-form-section-heading"><span>04</span><div><h4 id="adminDetailTitle">Información para el cliente</h4><p>Responde dudas frecuentes antes de que te contacten.</p></div></header>
             <div class="admin-form-grid">
               <label class="admin-field admin-field-wide">Descripción<textarea class="admin-input admin-textarea" name="description" rows="3" maxlength="2000" placeholder="Describe el aroma, duración o presentación con información útil."></textarea></label>
-              <label class="admin-field admin-field-wide">Características<textarea class="admin-input admin-textarea" name="features" rows="2" maxlength="3000" placeholder="Familia: amaderada&#10;Contenido: 100 ml"></textarea><span class="admin-field-help">Una característica por línea.</span></label>
+              <label class="admin-field admin-field-wide">Características adicionales<textarea class="admin-input admin-textarea" name="features" rows="2" maxlength="3000" placeholder="Agrega solo datos útiles que no estén indicados arriba."></textarea><span class="admin-field-help">No repitas familia olfativa, presentación ni color.</span></label>
             </div>
           </section>
         </div>
@@ -336,11 +336,13 @@ const openProductForm = (product = null, selectedCategory = "") => {
   $("#adminCategoryStaticValue").textContent = fields.category.value;
   fields.regularPrice.value = product?.regularPrice ?? "";
   fields.offerPrice.value = product?.offerPrice ?? "";
-  fields.gender.value = product?.gender ?? "";
-  fields.stockStatus.value = product?.stockStatus ?? "En stock";
+  setSelectValue(fields.gender, product?.gender ?? "");
+  setSelectValue(fields.stockStatus, product?.stockStatus ?? "En stock");
   fields.categoryDetails.value = JSON.stringify(product?.details ?? {});
   fields.sizes.value = product?.sizes?.join("\n") ?? "";
   fields.colors.value = product?.colors?.map((color) => `${color.name} | ${color.hex}`).join("\n") ?? "";
+  renderPresentationChoices(product?.sizes ?? []);
+  renderColorChoices(product?.colors ?? []);
   fields.description.value = product?.description ?? "";
   fields.features.value = product?.features?.join("\n") ?? "";
   fields.onSale.checked = product?.onSale ?? false;
@@ -423,8 +425,102 @@ const renderImagePreviews = (animate = false) => {
 
 const lines = (value) => value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
 
+const setSelectValue = (select, value) => {
+  if (!value) { select.value = ""; return; }
+  if (![...select.options].some((option) => option.value === value)) select.add(new Option(value, value));
+  select.value = value;
+};
+
+const presentationOptionsByCategory = {
+  Perfumes: ["30 ml", "50 ml", "75 ml", "100 ml", "125 ml", "150 ml", "200 ml", "250 ml"],
+  Calzado: ["22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45"],
+  Ropa: ["XS", "S", "M", "L", "XL", "XXL"],
+  Lentes: ["Unitalla"],
+  Accesorios: ["Unitalla"],
+  Otros: ["Unitalla"]
+};
+const colorOptions = [
+  ["Negro", "#111827"], ["Blanco", "#FFFFFF"], ["Gris", "#6B7280"], ["Beige", "#D6C1A1"],
+  ["Café", "#7C4A2D"], ["Rojo", "#C9342D"], ["Azul", "#2563EB"], ["Verde", "#347857"],
+  ["Dorado", "#C5A059"], ["Plateado", "#BFC3C8"], ["Rosa", "#E76F90"], ["Morado", "#8054A6"]
+];
+
+const renderPresentationChoices = (selected = []) => {
+  const group = $("#adminPresentationChoices [data-choice-group]");
+  const category = productForm.elements.category.value;
+  const values = [...new Set([...(presentationOptionsByCategory[category] || ["Unitalla"]), ...selected])];
+  $("#adminPresentationChoices > span").textContent = category === "Perfumes" ? "Presentaciones" : category === "Calzado" || category === "Ropa" ? "Tallas" : "Variantes";
+  $("#adminPresentationChoices .admin-field-help").textContent = category === "Perfumes" ? "Selecciona los tamaños disponibles." : "Selecciona una o varias opciones disponibles.";
+  group.innerHTML = values.map((value) => `<button type="button" class="admin-choice-chip" data-presentation="${escapeHtml(value)}" aria-pressed="${selected.includes(value)}">${escapeHtml(value)}</button>`).join("");
+  group.querySelectorAll("[data-presentation]").forEach((button) => button.addEventListener("click", () => {
+    button.setAttribute("aria-pressed", String(button.getAttribute("aria-pressed") !== "true"));
+    productForm.elements.sizes.value = [...group.querySelectorAll('[aria-pressed="true"]')].map((item) => item.dataset.presentation).join("\n");
+  }));
+  productForm.elements.sizes.value = selected.join("\n");
+};
+
+const renderColorChoices = (selected = []) => {
+  const group = $("#adminColorChoices [data-choice-group]");
+  const palette = [...colorOptions];
+  selected.forEach((color) => {
+    if (!palette.some(([, hex]) => hex.toLowerCase() === String(color.hex).toLowerCase())) palette.push([color.name || "Personalizado", color.hex]);
+  });
+  group.innerHTML = palette.map(([name, hex]) => {
+    const active = selected.some((color) => String(color.hex).toLowerCase() === hex.toLowerCase());
+    return `<button type="button" class="admin-color-swatch${active ? " is-selected" : ""}" data-color-name="${escapeHtml(name)}" data-color-hex="${escapeHtml(hex)}" aria-label="${escapeHtml(name)}" aria-pressed="${active}"><span style="--swatch-color:${escapeHtml(hex)}"></span><small>${escapeHtml(name)}</small></button>`;
+  }).join("");
+  const sync = () => {
+    const colors = [...group.querySelectorAll('[aria-pressed="true"]')].map((button) => `${button.dataset.colorName} | ${button.dataset.colorHex}`);
+    productForm.elements.colors.value = colors.join("\n");
+  };
+  const bindColorToggle = (button) => button.addEventListener("click", () => {
+    button.classList.toggle("is-selected");
+    button.setAttribute("aria-pressed", String(button.classList.contains("is-selected")));
+    sync();
+  });
+  group.querySelectorAll("[data-color-hex]").forEach(bindColorToggle);
+  $("#adminCustomColor").oninput = (event) => {
+    const hex = event.target.value;
+    const name = "Personalizado";
+    let button = group.querySelector(`[data-color-hex="${hex}"]`);
+    if (!button) {
+      button = document.createElement("button");
+      button.type = "button";
+      button.className = "admin-color-swatch is-selected";
+      button.dataset.colorName = name;
+      button.dataset.colorHex = hex;
+      button.setAttribute("aria-label", `${name} ${hex}`);
+      button.setAttribute("aria-pressed", "true");
+      button.innerHTML = `<span style="--swatch-color:${hex}"></span><small>${name}</small>`;
+      group.append(button);
+      bindColorToggle(button);
+    } else {
+      button.classList.add("is-selected");
+      button.setAttribute("aria-pressed", "true");
+    }
+    sync();
+  };
+  productForm.elements.colors.value = selected.map((color) => `${color.name} | ${color.hex}`).join("\n");
+};
+
+const perfumeFamilies = ["Cítrica", "Floral", "Amaderada", "Aromática", "Acuática", "Oriental / ambarada", "Gourmand", "Chipre"];
+const recommendPerfumeFamily = (name) => {
+  const normalized = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const rules = [
+    ["Cítrica", /citr|citrus|bergamot|bergamota|limon|lemon|mandarin|mandarina|orange|naranja|grapefruit|toronja|light blue/],
+    ["Floral", /floral|rose|rosa|jasmine|jazmin|peony|peonia|tuberose|gardenia/],
+    ["Amaderada", /wood|woods|oud|madera|sandalwood|santalo|cedar|cedro|vetiver|patchouli|pachuli/],
+    ["Acuática", /aqua|acqua|marine|ocean|oceano|aquatic|water|gio/],
+    ["Gourmand", /vanilla|vainilla|caramel|caramelo|chocolate|coffee|cafe|coco|tonka|la vie est belle/],
+    ["Aromática", /sauvage|bleu|eros|aromatic|aromatique|lavender|lavanda|fougere|y eau/],
+    ["Chipre", /chypre|chipre|moss|musgo/],
+    ["Oriental / ambarada", /amber|ambar|oriental|spice|especia|incense|incienso|212 vip|one million|good girl/]
+  ];
+  return rules.find(([, pattern]) => pattern.test(normalized))?.[0] || "";
+};
+
 const categoryOptions = {
-  Perfumes: { types: ["Perfume", "Eau de parfum", "Eau de toilette", "Body mist"] },
+  Perfumes: { types: ["Parfum", "Eau de parfum", "Eau de toilette", "Eau de cologne", "Body mist"] },
   Ropa: { types: ["Camisa", "Playera", "Pantalón", "Vestido", "Sudadera", "Chamarra", "Otra prenda"] },
   Calzado: { types: ["Tenis", "Zapatos", "Botas", "Sandalias", "Otro calzado"] },
   Accesorios: { types: ["Bolsa", "Lentes", "Cartera", "Reloj", "Cinturón", "Otro accesorio"] }
@@ -433,20 +529,23 @@ const categoryOptions = {
 const renderCategoryFields = (details = {}, animate = false) => {
   const category = productForm.elements.category.value;
   const config = categoryOptions[category] || { types: [category === "Lentes" ? "Lentes" : category === "Otros" ? "Otro" : category] };
-  const typeOptions = config.types.map((type) => `<option${details.type === type ? " selected" : ""}>${escapeHtml(type.trim())}</option>`).join("");
+  const familyOptions = [...new Set([...perfumeFamilies, details.fragranceFamily].filter(Boolean))];
+  const typeOptions = config.types.map((type) => `<option${(details.type === type || details.concentration === type) ? " selected" : ""}>${escapeHtml(type.trim())}</option>`).join("");
   const perfumeFields = category === "Perfumes" ? `
-    <label class="admin-field">Familia olfativa<input class="admin-input" name="fragranceFamily" maxlength="80" value="${escapeHtml(details.fragranceFamily || "")}" placeholder="Floral, amaderada, cítrica…" /></label>
-    <label class="admin-field">Concentración<select class="admin-input" name="concentration"><option value="">Selecciona una opción</option>${["Parfum", "Eau de parfum", "Eau de toilette", "Eau de cologne", "Body mist"].map((value) => `<option${details.concentration === value ? " selected" : ""}>${value}</option>`).join("")}</select></label>` : "";
+    <label class="admin-field">Concentración<select class="admin-input" name="concentration"><option value="">Selecciona una opción</option>${config.types.map((value) => `<option${(details.concentration === value || details.type === value) ? " selected" : ""}>${value}</option>`).join("")}</select><span class="admin-field-help">Parfum, Eau de parfum, Eau de toilette o Body mist.</span></label>
+    <div class="admin-field admin-field-wide"><span>Familia olfativa</span><div class="admin-family-choices" role="group" aria-label="Familia olfativa">${familyOptions.map((family) => `<button type="button" class="admin-choice-chip" data-family="${escapeHtml(family)}" aria-pressed="${details.fragranceFamily === family}">${escapeHtml(family)}${details.fragranceFamily === family ? ' <span class="admin-family-selected">Elegida</span>' : ""}</button>`).join("")}</div><p class="admin-family-recommendation" id="adminFamilyRecommendation" aria-live="polite"></p><input type="hidden" name="fragranceFamily" value="${escapeHtml(details.fragranceFamily || "")}" /></div>` : "";
   const sharedFields = category === "Perfumes" ? "" : `<label class="admin-field">Material<input class="admin-input" name="material" maxlength="100" value="${escapeHtml(details.material || "")}" placeholder="Algodón, piel, metal…" /></label>`;
-  const typeLabel = category === "Perfumes" ? "Tipo de fragancia" : category === "Ropa" ? "Tipo de prenda" : category === "Calzado" ? "Tipo de calzado" : category === "Accesorios" ? "Tipo de accesorio" : "Tipo de producto";
-  categoryFields.innerHTML = `<div class="admin-category-heading"><strong>Detalles de ${category.toLocaleLowerCase("es-MX")}</strong></div><div class="admin-category-grid"><label class="admin-field">${typeLabel}<select class="admin-input" name="productType"><option value="">Selecciona una opción</option>${typeOptions}</select></label>${perfumeFields}${sharedFields}</div>`;
+  const typeLabel = category === "Ropa" ? "Tipo de prenda" : category === "Calzado" ? "Tipo de calzado" : category === "Accesorios" ? "Tipo de accesorio" : "Tipo de producto";
+  const typeField = category === "Perfumes" ? "" : `<label class="admin-field">${typeLabel}<select class="admin-input" name="productType"><option value="">Selecciona una opción</option>${typeOptions}</select></label>`;
+  categoryFields.innerHTML = `<div class="admin-category-heading"><strong>Detalles de ${category.toLocaleLowerCase("es-MX")}</strong></div><div class="admin-category-grid">${typeField}${perfumeFields}${sharedFields}</div>`;
   categoryFields.hidden = false;
   if (animate && !matchMedia("(prefers-reduced-motion: reduce)").matches) categoryFields.animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }], { duration: 180, easing: "cubic-bezier(0.23, 1, 0.32, 1)" });
   categoryFields.dataset.initialized = "true";
   productForm.elements.categoryDetails.value = JSON.stringify(details);
   const updateCategoryDraft = () => {
     const next = Object.fromEntries([...categoryFields.querySelectorAll("input,select")].map((field) => [field.name, field.value]));
-    const savedDetails = { type: next.productType || "", material: next.material || "", fragranceFamily: next.fragranceFamily || "", concentration: next.concentration || "" };
+    const selectedConcentration = next.concentration || "";
+    const savedDetails = { type: category === "Perfumes" ? selectedConcentration : (next.productType || ""), material: next.material || "", fragranceFamily: next.fragranceFamily || "", concentration: selectedConcentration };
     productForm.elements.categoryDetails.value = JSON.stringify(savedDetails);
     categoryDrafts[category] = savedDetails;
   };
@@ -454,6 +553,29 @@ const renderCategoryFields = (details = {}, animate = false) => {
     control.addEventListener("input", updateCategoryDraft);
     control.addEventListener("change", updateCategoryDraft);
   });
+  productForm.elements.name.oninput = null;
+  const familyInput = categoryFields.querySelector('[name="fragranceFamily"]');
+  if (familyInput) {
+    const recommendation = $("#adminFamilyRecommendation");
+    const paintRecommendation = () => {
+      const suggested = recommendPerfumeFamily(productForm.elements.name.value);
+      recommendation.textContent = suggested ? `Sugerencia por el nombre: ${suggested}. Confirma o elige otra familia.` : "Escribe el nombre para recibir una sugerencia; puedes elegir cualquier familia.";
+      categoryFields.querySelectorAll("[data-family]").forEach((button) => {
+        button.classList.toggle("is-recommended", button.dataset.family === suggested);
+        const selected = button.dataset.family === familyInput.value;
+        button.setAttribute("aria-pressed", String(selected));
+        button.querySelector(".admin-family-selected")?.remove();
+        if (selected) button.insertAdjacentHTML("beforeend", ' <span class="admin-family-selected">Elegida</span>');
+      });
+    };
+    paintRecommendation();
+    categoryFields.querySelectorAll("[data-family]").forEach((button) => button.addEventListener("click", () => {
+      familyInput.value = button.dataset.family;
+      updateCategoryDraft();
+      paintRecommendation();
+    }));
+    productForm.elements.name.oninput = paintRecommendation;
+  }
 };
 
 const uploadImage = async (file) => adminFetch("/api/admin/uploads/product-image", {
@@ -544,6 +666,7 @@ productForm.elements.category.addEventListener("change", () => {
   activeCategory = productForm.elements.category.value;
   updateCategorySectionLabel(activeCategory);
   renderCategoryFields(categoryDrafts[activeCategory] || {}, true);
+  renderPresentationChoices(lines(productForm.elements.sizes.value));
 });
 imageFiles.addEventListener("change", () => {
   const selected = [...imageFiles.files];
