@@ -94,10 +94,10 @@ adminOverlay.innerHTML = `
             </div>
           </section>
           <section class="admin-form-section" aria-labelledby="adminPriceTitle">
-            <header class="admin-form-section-heading"><span>03</span><div><h4 id="adminPriceTitle">Precio y disponibilidad</h4><p>El precio de venta no puede superar el precio regular.</p></div></header>
+            <header class="admin-form-section-heading"><span>03</span><div><h4 id="adminPriceTitle">Precio y disponibilidad</h4><p>Indica el precio que verá el cliente y el estado del producto.</p></div></header>
             <div class="admin-form-grid">
-              <label class="admin-field">Precio regular (MXN)<input class="admin-input" name="regularPrice" type="number" min="1" step="0.01" required placeholder="$0.00" /></label>
-              <label class="admin-field">Precio de venta (MXN)<input class="admin-input" name="offerPrice" type="number" min="1" step="0.01" required placeholder="$0.00" /></label>
+              <input type="hidden" name="regularPrice" />
+              <label class="admin-field">Precio (MXN)<input class="admin-input" name="offerPrice" type="number" min="1" step="0.01" required placeholder="$0.00" /><span class="admin-field-help">Si marcas “En oferta”, se mostrará como promoción sin precio anterior.</span></label>
               <label class="admin-field">Público o género<select class="admin-input" name="gender"><option value="">Sin especificar</option><option>Unisex</option><option>Mujer</option><option>Hombre</option></select></label>
               <label class="admin-field">Disponibilidad<select class="admin-input" name="stockStatus"><option>En stock</option><option>Últimas unidades</option><option>Agotado</option></select><span class="admin-field-help">Se muestra en los detalles del producto.</span></label>
             </div>
@@ -141,6 +141,7 @@ const imageStatus = $("#adminImageStatus");
 const categoryFields = $("#adminCategoryFields");
 let productCache = [];
 let categoryCache = ["Perfumes", "Calzado", "Lentes", "Ropa", "Accesorios", "Otros"];
+let fragranceFamilyCache = [];
 let pendingDeleteId = null;
 let imageEntries = [];
 let editingId = null;
@@ -245,6 +246,7 @@ const showWorkspace = async () => {
 const refreshProducts = async () => {
   productCache = await adminFetch("/api/products");
   try { categoryCache = await adminFetch("/api/admin/categories"); } catch { /* La sesión expirada se informa al guardar. */ }
+  try { fragranceFamilyCache = await adminFetch("/api/admin/fragrance-families"); } catch { fragranceFamilyCache = [...perfumeFamilies]; }
   syncProductCategoryOptions();
   renderProducts($("#adminSearch").value);
 };
@@ -295,7 +297,7 @@ const renderProducts = (query = "") => {
   const renderProductCard = (product) => `
     <article class="admin-product-row" data-product-id="${escapeHtml(product.id)}">
       <div class="admin-product-image">${productImagePath(product) ? `<img src="${escapeHtml(productImagePath(product))}" alt="${escapeHtml(product.name)}" loading="lazy" />` : `<span aria-hidden="true">DM</span>`}</div>
-      <div class="admin-product-info"><h3>${escapeHtml(product.name)}</h3><p>${escapeHtml(product.brand)} · ${escapeHtml(product.category)}</p><strong>${money(product.offerPrice)}</strong>${product.onSale ? `<span class="admin-sale-price"> Antes ${money(product.regularPrice)}</span>` : ""}</div>
+      <div class="admin-product-info"><h3>${escapeHtml(product.name)}</h3><p>${escapeHtml(product.brand)} · ${escapeHtml(product.category)}</p><strong>${money(product.offerPrice)}</strong>${product.onSale && product.regularPrice > product.offerPrice ? `<span class="admin-sale-price"> Antes ${money(product.regularPrice)}</span>` : ""}</div>
       ${pendingDeleteId === product.id ? `
         <div class="admin-delete-confirm" role="group" aria-label="Confirmar eliminación de ${escapeHtml(product.name)}">
           <p>¿Eliminar este producto del catálogo?</p>
@@ -334,7 +336,7 @@ const openProductForm = (product = null, selectedCategory = "") => {
   $(".admin-category-edit-field").hidden = !editingId;
   $(".admin-category-static").hidden = Boolean(editingId);
   $("#adminCategoryStaticValue").textContent = fields.category.value;
-  fields.regularPrice.value = product?.regularPrice ?? "";
+  fields.regularPrice.value = "";
   fields.offerPrice.value = product?.offerPrice ?? "";
   setSelectValue(fields.gender, product?.gender ?? "");
   setSelectValue(fields.stockStatus, product?.stockStatus ?? "En stock");
@@ -554,11 +556,11 @@ const categoryOptions = {
 const renderCategoryFields = (details = {}, animate = false) => {
   const category = productForm.elements.category.value;
   const config = categoryOptions[category] || { types: [category === "Lentes" ? "Lentes" : category === "Otros" ? "Otro" : category] };
-  const familyOptions = [...new Set([...perfumeFamilies, details.fragranceFamily].filter(Boolean))];
+  const familyOptions = [...new Set([...(fragranceFamilyCache.length ? fragranceFamilyCache : perfumeFamilies), details.fragranceFamily].filter(Boolean))];
   const typeOptions = config.types.map((type) => `<option${(details.type === type || details.concentration === type) ? " selected" : ""}>${escapeHtml(type.trim())}</option>`).join("");
   const perfumeFields = category === "Perfumes" ? `
     <label class="admin-field">Concentración<select class="admin-input" name="concentration"><option value="">Selecciona una opción</option>${config.types.map((value) => `<option${(details.concentration === value || details.type === value) ? " selected" : ""}>${value}</option>`).join("")}</select><span class="admin-field-help">Parfum, Eau de parfum, Eau de toilette o Body mist.</span></label>
-    <div class="admin-field admin-field-wide"><span>Familia olfativa</span><div class="admin-family-choices" role="group" aria-label="Familia olfativa">${familyOptions.map((family) => `<button type="button" class="admin-choice-chip" data-family="${escapeHtml(family)}" aria-pressed="${details.fragranceFamily === family}">${escapeHtml(family)}${details.fragranceFamily === family ? ' <span class="admin-family-selected">Elegida</span>' : ""}</button>`).join("")}</div><p class="admin-family-recommendation" id="adminFamilyRecommendation" aria-live="polite"></p><input type="hidden" name="fragranceFamily" value="${escapeHtml(details.fragranceFamily || "")}" /></div>` : "";
+    <div class="admin-field admin-field-wide"><span>Familia olfativa</span><div class="admin-family-choices" role="group" aria-label="Familia olfativa">${familyOptions.map((family) => `<button type="button" class="admin-choice-chip" data-family="${escapeHtml(family)}" aria-pressed="${details.fragranceFamily === family}">${escapeHtml(family)}${details.fragranceFamily === family ? ' <span class="admin-family-selected">Elegida</span>' : ""}</button>`).join("")}</div><p class="admin-family-recommendation" id="adminFamilyRecommendation" aria-live="polite"></p><button class="admin-family-add-toggle" type="button" id="adminFamilyAddToggle"><span aria-hidden="true">+</span> Agregar familia</button><form class="admin-family-add-form" id="adminFamilyAddForm" hidden><label class="admin-field" for="adminNewFamilyName">Nueva familia<input class="admin-input" id="adminNewFamilyName" name="name" maxlength="80" required placeholder="Ej. Especiada" /></label><div><button class="admin-button admin-button-quiet" type="button" id="adminFamilyAddCancel">Cancelar</button><button class="admin-button admin-button-primary" type="submit">Guardar familia</button></div><p class="admin-family-add-message" role="status" aria-live="polite"></p></form><input type="hidden" name="fragranceFamily" value="${escapeHtml(details.fragranceFamily || "")}" /></div>` : "";
   const sharedFields = category === "Perfumes" ? "" : `<label class="admin-field">Material<input class="admin-input" name="material" maxlength="100" value="${escapeHtml(details.material || "")}" placeholder="Algodón, piel, metal…" /></label>`;
   const typeLabel = category === "Ropa" ? "Tipo de prenda" : category === "Calzado" ? "Tipo de calzado" : category === "Accesorios" ? "Tipo de accesorio" : "Tipo de producto";
   const typeField = category === "Perfumes" ? "" : `<label class="admin-field">${typeLabel}<select class="admin-input" name="productType"><option value="">Selecciona una opción</option>${typeOptions}</select></label>`;
@@ -594,11 +596,47 @@ const renderCategoryFields = (details = {}, animate = false) => {
       });
     };
     paintRecommendation();
-    categoryFields.querySelectorAll("[data-family]").forEach((button) => button.addEventListener("click", () => {
+    const chooseFamily = (button) => {
       familyInput.value = button.dataset.family;
       updateCategoryDraft();
       paintRecommendation();
-    }));
+    };
+    categoryFields.querySelectorAll("[data-family]").forEach((button) => button.addEventListener("click", () => chooseFamily(button)));
+    const familyForm = $("#adminFamilyAddForm");
+    $("#adminFamilyAddToggle").addEventListener("click", () => {
+      familyForm.hidden = !familyForm.hidden;
+      if (!familyForm.hidden) $("#adminNewFamilyName").focus();
+    });
+    $("#adminFamilyAddCancel").addEventListener("click", () => { familyForm.reset(); familyForm.hidden = true; });
+    familyForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const submit = familyForm.querySelector('[type="submit"]');
+      const message = $("#adminFamilyAddForm .admin-family-add-message");
+      submit.disabled = true;
+      message.textContent = "";
+      try {
+        const result = await adminFetch("/api/admin/fragrance-families", { method: "POST", body: JSON.stringify({ name: $("#adminNewFamilyName").value }) });
+        fragranceFamilyCache = result.families;
+        let familyButton = [...categoryFields.querySelectorAll("[data-family]")].find((button) => button.dataset.family === result.family);
+        if (!familyButton) {
+          familyButton = document.createElement("button");
+          familyButton.type = "button";
+          familyButton.className = "admin-choice-chip";
+          familyButton.dataset.family = result.family;
+          familyButton.setAttribute("aria-pressed", "false");
+          familyButton.textContent = result.family;
+          familyButton.addEventListener("click", () => chooseFamily(familyButton));
+          categoryFields.querySelector(".admin-family-choices").append(familyButton);
+        }
+        chooseFamily(familyButton);
+        familyForm.reset();
+        familyForm.hidden = true;
+      } catch (error) {
+        message.textContent = error.message;
+      } finally {
+        submit.disabled = false;
+      }
+    });
     productForm.elements.name.oninput = paintRecommendation;
   }
 };
@@ -616,7 +654,7 @@ const formProduct = () => {
     name: fields.name.value,
     brand: fields.brand.value,
     category: fields.category.value,
-    regularPrice: Number(fields.regularPrice.value),
+    regularPrice: Number(fields.offerPrice.value),
     offerPrice: Number(fields.offerPrice.value),
     gender: fields.gender.value,
     stockStatus: fields.stockStatus.value,

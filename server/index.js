@@ -15,6 +15,7 @@ const SESSION_SECRET = process.env.SESSION_SECRET || "";
 const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(ROOT, "data"));
 const PRODUCTS_FILE = path.join(DATA_DIR, "products.json");
 const CATEGORIES_FILE = path.join(DATA_DIR, "categories.json");
+const FRAGRANCE_FAMILIES_FILE = path.join(DATA_DIR, "fragrance-families.json");
 const PRODUCT_IMAGES_DIR = path.join(DATA_DIR, "product-images");
 const SESSION_COOKIE = "__Host-dm-admin";
 const SESSION_TTL_SECONDS = 60 * 60 * 12;
@@ -31,7 +32,9 @@ const cookieName = isProduction ? SESSION_COOKIE : "dm-admin";
 const passwordDigest = crypto.scryptSync(ADMIN_PASSWORD, SESSION_SALT, 64);
 let products = [];
 const DEFAULT_CATEGORIES = ["Perfumes", "Calzado", "Lentes", "Ropa", "Accesorios", "Otros"];
+const DEFAULT_FRAGRANCE_FAMILIES = ["Cítrica", "Floral", "Amaderada", "Aromática", "Acuática", "Oriental / ambarada", "Gourmand", "Chipre"];
 let categories = [...DEFAULT_CATEGORIES];
+let fragranceFamilies = [...DEFAULT_FRAGRANCE_FAMILIES];
 let writeQueue = Promise.resolve();
 
 app.disable("x-powered-by");
@@ -141,10 +144,11 @@ function normalizeProduct(input, id) {
   const name = cleanText(input.name, "El nombre", 160, true);
   const brand = cleanText(input.brand, "La marca", 100, true);
   const category = cleanText(input.category, "La categoría", 80, true);
-  const regularPrice = Number(input.regularPrice);
   const offerPrice = Number(input.offerPrice);
-  if (!Number.isFinite(regularPrice) || regularPrice <= 0 || regularPrice > 100000000) throw new Error("El precio regular debe ser mayor que cero.");
-  if (!Number.isFinite(offerPrice) || offerPrice <= 0 || offerPrice > regularPrice) throw new Error("El precio de venta debe ser mayor que cero y no superar el precio regular.");
+  const suppliedRegularPrice = input.regularPrice == null || input.regularPrice === "" ? offerPrice : Number(input.regularPrice);
+  const regularPrice = Math.max(suppliedRegularPrice, offerPrice);
+  if (!Number.isFinite(offerPrice) || offerPrice <= 0 || offerPrice > 100000000) throw new Error("El precio debe ser mayor que cero.");
+  if (!Number.isFinite(regularPrice) || regularPrice <= 0 || regularPrice > 100000000) throw new Error("El precio debe ser mayor que cero.");
 
   const images = stringList(input.images, "Las imágenes", 12, 2048);
   for (const image of images) {
@@ -225,6 +229,22 @@ async function persistCategories(nextCategories) {
   await rename(temporaryFile, CATEGORIES_FILE);
 }
 
+function mergeFragranceFamilies(values) {
+  const seen = new Set();
+  return values.map((value) => cleanText(value, "La familia olfativa", 80, true)).filter((value) => {
+    const key = categoryKey(value);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+async function persistFragranceFamilies(nextFamilies) {
+  const temporaryFile = `${FRAGRANCE_FAMILIES_FILE}.tmp`;
+  await writeFile(temporaryFile, `${JSON.stringify(nextFamilies, null, 2)}\n`, "utf8");
+  await rename(temporaryFile, FRAGRANCE_FAMILIES_FILE);
+}
+
 function handleValidationError(error, res) {
   return res.status(400).json({ error: error.message || "No se pudieron guardar los cambios." });
 }
@@ -246,6 +266,24 @@ app.post("/api/admin/categories", sameOrigin, ownerOnly, async (req, res) => {
     await persistCategories(nextCategories);
     categories = nextCategories;
     res.status(201).json({ category: name, categories });
+  } catch (error) {
+    handleValidationError(error, res);
+  }
+});
+
+app.get("/api/admin/fragrance-families", ownerOnly, (_req, res) => {
+  res.set("Cache-Control", "no-store").json(fragranceFamilies);
+});
+
+app.post("/api/admin/fragrance-families", sameOrigin, ownerOnly, async (req, res) => {
+  try {
+    const name = cleanText(req.body?.name, "El nombre de la familia olfativa", 80, true);
+    const existing = fragranceFamilies.find((family) => categoryKey(family) === categoryKey(name));
+    if (existing) return res.json({ family: existing, families: fragranceFamilies });
+    const nextFamilies = mergeFragranceFamilies([...fragranceFamilies, name]);
+    await persistFragranceFamilies(nextFamilies);
+    fragranceFamilies = nextFamilies;
+    res.status(201).json({ family: name, families: fragranceFamilies });
   } catch (error) {
     handleValidationError(error, res);
   }
@@ -405,6 +443,15 @@ try {
 
 categories = mergeCategories([...categories, ...products.map((product) => product.category)]);
 await persistCategories(categories);
+try {
+  const savedFamilies = JSON.parse(await readFile(FRAGRANCE_FAMILIES_FILE, "utf8"));
+  if (!Array.isArray(savedFamilies)) throw new Error("Formato inválido.");
+  fragranceFamilies = mergeFragranceFamilies([...DEFAULT_FRAGRANCE_FAMILIES, ...savedFamilies, ...products.map((product) => product.details?.fragranceFamily).filter(Boolean)]);
+} catch (error) {
+  if (error.code !== "ENOENT") console.error("No se pudo leer fragrance-families.json; se cargarán las familias iniciales.", error.message);
+  fragranceFamilies = mergeFragranceFamilies([...DEFAULT_FRAGRANCE_FAMILIES, ...products.map((product) => product.details?.fragranceFamily).filter(Boolean)]);
+}
+await persistFragranceFamilies(fragranceFamilies);
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`API y servidor listos en el puerto ${PORT}.`);

@@ -502,8 +502,11 @@ document.addEventListener("DOMContentLoaded", () => {
         break;
       case "discount":
         result.sort((a, b) => {
-          const discA = (a.regularPrice - a.offerPrice) / a.regularPrice;
-          const discB = (b.regularPrice - b.offerPrice) / b.regularPrice;
+          const discount = (product) => Number(product.regularPrice) > 0
+            ? Math.max(0, (Number(product.regularPrice) - Number(product.offerPrice)) / Number(product.regularPrice))
+            : 0;
+          const discA = discount(a);
+          const discB = discount(b);
           return discB - discA;
         });
         break;
@@ -579,9 +582,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     productsGrid.innerHTML = state.filteredProducts
       .map((product) => {
-        const discountPercent = Math.round(
-          ((product.regularPrice - product.offerPrice) / product.regularPrice) * 100
-        );
+        const hasDiscount = Number(product.regularPrice) > Number(product.offerPrice);
+        const discountPercent = hasDiscount
+          ? Math.round(((Number(product.regularPrice) - Number(product.offerPrice)) / Number(product.regularPrice)) * 100)
+          : 0;
         const imagePath = product.images?.[0] || "assets/logo.png";
         const productImage = product.id === "sauvage-extrain-ef27ec" && imagePath.startsWith("https://www.bing.com/images/search")
           ? "/assets/products/sauvage-extrain.jpg"
@@ -596,7 +600,7 @@ document.addEventListener("DOMContentLoaded", () => {
               <img src="${escapeHtml(productImage)}" alt="" loading="lazy" />
             </button>
             <div class="product-card-badges" aria-label="Etiquetas del producto">
-              ${product.onSale ? `<span class="product-badge product-badge-sale">-${discountPercent}%</span>` : ""}
+              ${product.onSale ? `<span class="product-badge product-badge-sale">${hasDiscount ? `-${discountPercent}%` : "Oferta"}</span>` : ""}
               ${product.isNew ? `<span class="product-badge product-badge-new">Nuevo</span>` : ""}
             </div>
             ${product.featured ? `<span class="product-badge product-badge-featured">Selección DM</span>` : ""}
@@ -611,7 +615,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <h3 class="product-card-title" title="${escapeHtml(product.name)}">${escapeHtml(product.name)}</h3>
             <div class="product-card-price">
               <span>${formatPrice(product.offerPrice)}</span>
-              ${product.onSale ? `<span class="product-card-regular-price">${formatPrice(product.regularPrice)}</span>` : ""}
+              ${product.onSale && hasDiscount ? `<span class="product-card-regular-price">${formatPrice(product.regularPrice)}</span>` : ""}
             </div>
             <div class="product-card-actions">
               <button type="button" class="btn-open-detail" data-id="${escapeHtml(product.id)}">Ver detalles</button>
@@ -878,7 +882,7 @@ document.addEventListener("DOMContentLoaded", () => {
       : isMobileView ? "Cotizar por WhatsApp" : "Pedir por WhatsApp";
     modalTitle.textContent = prod.name;
     modalPriceCurrent.textContent = formatPrice(prod.offerPrice);
-    modalPriceRegular.textContent = prod.onSale ? formatPrice(prod.regularPrice) : "";
+    modalPriceRegular.textContent = prod.onSale && Number(prod.regularPrice) > Number(prod.offerPrice) ? formatPrice(prod.regularPrice) : "";
     modalDesc.textContent = prod.description;
     qtyDisplay.textContent = state.quantity;
     modalTotalDisplay.textContent = formatPrice(prod.offerPrice);
