@@ -1518,7 +1518,7 @@ input[type="checkbox"] { border-radius: var(--ui-radius-pill); }
     box-shadow: none;
     backdrop-filter: none;
   }
-  .social-float { gap: 8px; }
+  .social-float { flex-direction: column; gap: 8px; }
   .social-float-facebook { display: none; }
   .social-float-instagram { display: inline-flex; width: 48px; height: 48px; min-width: 48px; min-height: 48px; border-radius: 50%; }
   .social-float-whatsapp { width: 48px; height: 48px; min-width: 48px; min-height: 48px; border-radius: 50%; }
