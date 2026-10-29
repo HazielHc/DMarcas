@@ -461,16 +461,20 @@ const renderPresentationChoices = (selected = []) => {
 
 const renderColorChoices = (selected = []) => {
   const group = $("#adminColorChoices [data-choice-group]");
+  const lastCustomIndex = selected.reduce((last, color, index) => color?.name === "Personalizado" ? index : last, -1);
+  const cleanSelected = selected.filter((color, index) => color?.name !== "Personalizado" || index === lastCustomIndex);
+  const uniqueSelected = [...new Map(cleanSelected.filter((color) => color?.hex).map((color) => [String(color.hex).toLowerCase(), color])).values()];
   const palette = [...colorOptions];
-  selected.forEach((color) => {
+  uniqueSelected.forEach((color) => {
     if (!palette.some(([, hex]) => hex.toLowerCase() === String(color.hex).toLowerCase())) palette.push([color.name || "Personalizado", color.hex]);
   });
   group.innerHTML = palette.map(([name, hex]) => {
-    const active = selected.some((color) => String(color.hex).toLowerCase() === hex.toLowerCase());
-    return `<button type="button" class="admin-color-swatch${active ? " is-selected" : ""}" data-color-name="${escapeHtml(name)}" data-color-hex="${escapeHtml(hex)}" aria-label="${escapeHtml(name)}" aria-pressed="${active}"><span style="--swatch-color:${escapeHtml(hex)}"></span><small>${escapeHtml(name)}</small></button>`;
+    const active = uniqueSelected.some((color) => String(color.hex).toLowerCase() === hex.toLowerCase());
+    return `<button type="button" class="admin-color-swatch${active ? " is-selected" : ""}" data-color-name="${escapeHtml(name)}" data-color-hex="${escapeHtml(hex)}"${name === "Personalizado" ? ' data-custom-color="true"' : ""} aria-label="${escapeHtml(name)}" aria-pressed="${active}"><span style="--swatch-color:${escapeHtml(hex)}"></span><small>${escapeHtml(name)}</small></button>`;
   }).join("");
   const sync = () => {
-    const colors = [...group.querySelectorAll('[aria-pressed="true"]')].map((button) => `${button.dataset.colorName} | ${button.dataset.colorHex}`);
+    const selectedColors = [...group.querySelectorAll('[aria-pressed="true"]')];
+    const colors = [...new Map(selectedColors.map((button) => [button.dataset.colorHex.toLowerCase(), `${button.dataset.colorName} | ${button.dataset.colorHex}`])).values()];
     productForm.elements.colors.value = colors.join("\n");
   };
   const bindColorToggle = (button) => button.addEventListener("click", () => {
@@ -482,25 +486,31 @@ const renderColorChoices = (selected = []) => {
   $("#adminCustomColor").oninput = (event) => {
     const hex = event.target.value;
     const name = "Personalizado";
-    let button = group.querySelector(`[data-color-hex="${hex}"]`);
+    let button = group.querySelector('[data-custom-color="true"]');
     if (!button) {
       button = document.createElement("button");
       button.type = "button";
       button.className = "admin-color-swatch is-selected";
+      button.dataset.customColor = "true";
       button.dataset.colorName = name;
-      button.dataset.colorHex = hex;
       button.setAttribute("aria-label", `${name} ${hex}`);
       button.setAttribute("aria-pressed", "true");
       button.innerHTML = `<span style="--swatch-color:${hex}"></span><small>${name}</small>`;
       group.append(button);
       bindColorToggle(button);
-    } else {
-      button.classList.add("is-selected");
-      button.setAttribute("aria-pressed", "true");
     }
+    button.dataset.colorHex = hex;
+    button.setAttribute("aria-label", `${name} ${hex}`);
+    button.querySelector("span").style.setProperty("--swatch-color", hex);
+    button.classList.add("is-selected");
+    button.setAttribute("aria-pressed", "true");
+    group.querySelectorAll(`[data-color-hex="${hex}"]:not([data-custom-color="true"])`).forEach((paletteColor) => {
+      paletteColor.classList.remove("is-selected");
+      paletteColor.setAttribute("aria-pressed", "false");
+    });
     sync();
   };
-  productForm.elements.colors.value = selected.map((color) => `${color.name} | ${color.hex}`).join("\n");
+  productForm.elements.colors.value = uniqueSelected.map((color) => `${color.name} | ${color.hex}`).join("\n");
 };
 
 const perfumeFamilies = ["Cítrica", "Floral", "Amaderada", "Aromática", "Acuática", "Oriental / ambarada", "Gourmand", "Chipre"];
