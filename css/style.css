@@ -844,7 +844,7 @@ input[type="checkbox"] { border-radius: var(--ui-radius-pill); }
 .admin-choice-chip:hover { border-color: var(--admin-ink); transform: translateY(-1px); }
 .admin-choice-chip[aria-pressed="true"] { border-color: var(--admin-ink); background: var(--admin-ink); color: #fff; }
 .admin-choice-chip.is-recommended:not([aria-pressed="true"]) { border-color: #9c7736; box-shadow: inset 0 0 0 1px #9c7736; }
-.admin-choice-chip:focus-visible,.admin-color-swatch:focus-visible,.admin-color-custom input:focus-visible { outline: 3px solid var(--admin-ink); outline-offset: 3px; }
+.admin-choice-chip:focus-visible,.admin-color-swatch:focus-visible,.admin-custom-color-slot input[type="color"]:focus-visible { outline: 3px solid var(--admin-ink); outline-offset: 3px; }
 .admin-family-selected { margin-left: 4px; font-size: 11px; font-weight: 500; }
 .admin-family-recommendation { min-height: 21px; margin: 8px 0 0; color: var(--admin-muted); font-size: 13px; font-weight: 500; }
 .admin-color-grid { gap: 10px; }
@@ -854,9 +854,10 @@ input[type="checkbox"] { border-radius: var(--ui-radius-pill); }
 .admin-color-swatch.is-selected { border-color: var(--admin-ink); background: #f6f6f5; }
 .admin-custom-color-controls { display: grid; justify-items: start; gap: 8px; margin-top: 4px; }
 .admin-custom-color-slots { display: flex; flex-wrap: wrap; gap: 10px; }
-.admin-custom-color-slot { display: grid; grid-template-columns: 74px 40px 36px; align-items: center; gap: 8px; padding: 7px; border: 1px solid var(--admin-line); border-radius: 10px; background: #fff; }
-.admin-custom-color-slot .admin-color-swatch { min-width: 66px; min-height: 58px; }
-.admin-custom-color-slot input[type="color"] { width: 36px; height: 36px; padding: 2px; border: 1px solid var(--admin-line-strong); border-radius: 8px; background: #fff; cursor: pointer; }
+.admin-custom-color-slot { display: grid; grid-template-columns: 52px 40px 44px; align-items: center; gap: 8px; padding: 7px; border: 1px solid var(--admin-line); border-radius: 10px; background: #fff; }
+.admin-custom-color-slot .admin-color-swatch { width: 48px; min-width: 48px; min-height: 48px; padding: 4px; }
+.admin-custom-color-slot .admin-color-swatch > span { width: 30px; height: 30px; }
+.admin-custom-color-slot input[type="color"] { width: 40px; height: 40px; padding: 2px; border: 1px solid var(--admin-line-strong); border-radius: 8px; background: #fff; cursor: pointer; }
 .admin-custom-color-add,.admin-custom-color-remove { min-width: 44px; min-height: 44px; border: 1px solid var(--admin-line-strong); border-radius: 9px; background: #fff; color: var(--admin-ink); font: 600 13px/1 Inter,system-ui,sans-serif; cursor: pointer; }
 .admin-custom-color-add { display: inline-flex; align-items: center; gap: 7px; padding: 0 12px; }
 .admin-custom-color-add > span { font-size: 20px; font-weight: 400; }

@@ -501,7 +501,7 @@ const renderColorChoices = (selected = []) => {
     const slotHex = /^#[\da-f]{6}$/i.test(hex || "") ? hex : "#6b7280";
     const slot = document.createElement("div");
     slot.className = "admin-custom-color-slot";
-    slot.innerHTML = `<button type="button" class="admin-color-swatch${isSelected ? " is-selected" : ""}" data-custom-color="true" data-color-name="${escapeHtml(slotName)}" data-color-hex="${slotHex}" aria-label="${escapeHtml(slotName)} ${slotHex}" aria-pressed="${Boolean(isSelected)}"><span style="--swatch-color:${slotHex}"></span><small>${escapeHtml(slotName)}</small></button><input type="color" value="${slotHex}" aria-label="Elegir ${escapeHtml(slotName)}" /><button type="button" class="admin-custom-color-remove" aria-label="Quitar ${escapeHtml(slotName)}">×</button>`;
+    slot.innerHTML = `<button type="button" class="admin-color-swatch${isSelected ? " is-selected" : ""}" data-custom-color="true" data-color-name="${escapeHtml(slotName)}" data-color-hex="${slotHex}" aria-label="Color ${escapeHtml(slotName)}: ${slotHex}" aria-pressed="${Boolean(isSelected)}"><span style="--swatch-color:${slotHex}"></span></button><input type="color" value="${slotHex}" aria-label="Elegir tono del color ${escapeHtml(slotName)}" /><button type="button" class="admin-custom-color-remove" aria-label="Quitar color ${escapeHtml(slotName)}">×</button>`;
     const swatch = slot.querySelector(".admin-color-swatch");
     const picker = slot.querySelector('input[type="color"]');
     bindColorToggle(swatch, customSlots);
