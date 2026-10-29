@@ -2094,3 +2094,70 @@ input[type="checkbox"] { border-radius: var(--ui-radius-pill); }
   #catalogoSection .catalog-filter-icon { display: none; }
   #catalogoSection .catalog-offers-toggle > span { position: static; width: auto; height: auto; overflow: visible; clip: auto; white-space: normal; }
 }
+
+/* Catálogo móvil: fondo blanco y fotografía amplia con radios continuos. */
+@media (max-width: 767px) {
+  #catalogoSection {
+    background: #fff;
+    color: #111214;
+  }
+  #catalogoSection .mobile-category-grid { gap: 12px; }
+  #catalogoSection .mobile-category-card {
+    overflow: hidden;
+    border: 1px solid #e2e3e5;
+    border-radius: 18px;
+    background: #fff;
+    color: #111214;
+    box-shadow: none;
+  }
+  #catalogoSection .mobile-category-image {
+    aspect-ratio: 1.08 / 1;
+    padding: 0;
+    overflow: hidden;
+    border-radius: 17px 17px 0 0;
+    background: #fff;
+  }
+  #catalogoSection .mobile-category-image img {
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    object-fit: cover;
+    transform: scale(1.04);
+  }
+  #catalogoSection .mobile-category-card-label {
+    min-height: 52px;
+    padding-inline: 12px;
+    color: #111214;
+  }
+  #catalogoSection .mobile-category-card-label i { color: #111214; }
+
+  #catalogoSection .product-card {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid #e2e3e5;
+    border-radius: 18px !important;
+    background: #fff;
+    box-shadow: none;
+  }
+  #catalogoSection .product-card-media {
+    overflow: hidden;
+    border-radius: 17px 17px 0 0;
+    background: #fff;
+  }
+  #catalogoSection .product-image-trigger {
+    overflow: hidden;
+    border-radius: 17px 17px 0 0 !important;
+    background: #fff;
+  }
+  #catalogoSection .product-image-trigger img {
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    object-fit: cover !important;
+    transform: scale(1.035);
+  }
+  #catalogoSection .product-card-copy { padding: 10px 11px 12px; }
+  #catalogoSection .product-card-title,
+  #catalogoSection .product-card-price,
+  #catalogoSection .product-card-brand { color: #111214; }
+}
