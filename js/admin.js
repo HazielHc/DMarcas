@@ -461,17 +461,29 @@ const renderPresentationChoices = (selected = []) => {
 
 const renderColorChoices = (selected = []) => {
   const group = $("#adminColorChoices [data-choice-group]");
-  const lastCustomIndex = selected.reduce((last, color, index) => color?.name === "Personalizado" ? index : last, -1);
-  const cleanSelected = selected.filter((color, index) => color?.name !== "Personalizado" || index === lastCustomIndex);
-  const uniqueSelected = [...new Map(cleanSelected.filter((color) => color?.hex).map((color) => [String(color.hex).toLowerCase(), color])).values()];
-  const palette = [...colorOptions];
-  uniqueSelected.forEach((color) => {
-    if (!palette.some(([, hex]) => hex.toLowerCase() === String(color.hex).toLowerCase())) palette.push([color.name || "Personalizado", color.hex]);
-  });
-  group.innerHTML = palette.map(([name, hex]) => {
-    const active = uniqueSelected.some((color) => String(color.hex).toLowerCase() === hex.toLowerCase());
-    return `<button type="button" class="admin-color-swatch${active ? " is-selected" : ""}" data-color-name="${escapeHtml(name)}" data-color-hex="${escapeHtml(hex)}"${name === "Personalizado" ? ' data-custom-color="true"' : ""} aria-label="${escapeHtml(name)}" aria-pressed="${active}"><span style="--swatch-color:${escapeHtml(hex)}"></span><small>${escapeHtml(name)}</small></button>`;
+  const isBuiltIn = (color) => colorOptions.some(([, hex]) => hex.toLowerCase() === String(color?.hex).toLowerCase());
+  const customColors = selected.filter((color) => color?.hex && (color.name === "Personalizado" || !isBuiltIn(color)));
+  const activeCustom = customColors.at(-1) || null;
+  const cleanSelected = selected.filter((color) => color?.hex && (isBuiltIn(color) || color === activeCustom));
+  const uniqueSelected = [...new Map(cleanSelected.map((color) => [String(color.hex).toLowerCase(), color])).values()];
+  const selectedHexes = new Set(uniqueSelected.map((color) => String(color.hex).toLowerCase()));
+  group.innerHTML = colorOptions.map(([name, hex]) => {
+    const active = selectedHexes.has(hex.toLowerCase());
+    return `<button type="button" class="admin-color-swatch${active ? " is-selected" : ""}" data-color-name="${escapeHtml(name)}" data-color-hex="${escapeHtml(hex)}" aria-label="${escapeHtml(name)}" aria-pressed="${active}"><span style="--swatch-color:${escapeHtml(hex)}"></span><small>${escapeHtml(name)}</small></button>`;
   }).join("");
+  const customHex = activeCustom?.hex || "#6b7280";
+  const customButton = document.createElement("button");
+  customButton.type = "button";
+  customButton.className = `admin-color-swatch${activeCustom ? " is-selected" : ""}`;
+  customButton.dataset.customColor = "true";
+  customButton.dataset.colorName = "Personalizado";
+  customButton.dataset.colorHex = customHex;
+  customButton.setAttribute("aria-label", `Personalizado ${customHex}`);
+  customButton.setAttribute("aria-pressed", String(Boolean(activeCustom)));
+  customButton.innerHTML = `<span style="--swatch-color:${customHex}"></span><small>Personalizado</small>`;
+  group.append(customButton);
+  const colorPicker = $("#adminCustomColor");
+  colorPicker.value = /^#[\da-f]{6}$/i.test(customHex) ? customHex : "#6b7280";
   const sync = () => {
     const selectedColors = [...group.querySelectorAll('[aria-pressed="true"]')];
     const colors = [...new Map(selectedColors.map((button) => [button.dataset.colorHex.toLowerCase(), `${button.dataset.colorName} | ${button.dataset.colorHex}`])).values()];
@@ -483,22 +495,11 @@ const renderColorChoices = (selected = []) => {
     sync();
   });
   group.querySelectorAll("[data-color-hex]").forEach(bindColorToggle);
-  $("#adminCustomColor").oninput = (event) => {
+  bindColorToggle(customButton);
+  colorPicker.oninput = (event) => {
     const hex = event.target.value;
     const name = "Personalizado";
-    let button = group.querySelector('[data-custom-color="true"]');
-    if (!button) {
-      button = document.createElement("button");
-      button.type = "button";
-      button.className = "admin-color-swatch is-selected";
-      button.dataset.customColor = "true";
-      button.dataset.colorName = name;
-      button.setAttribute("aria-label", `${name} ${hex}`);
-      button.setAttribute("aria-pressed", "true");
-      button.innerHTML = `<span style="--swatch-color:${hex}"></span><small>${name}</small>`;
-      group.append(button);
-      bindColorToggle(button);
-    }
+    const button = group.querySelector('[data-custom-color="true"]');
     button.dataset.colorHex = hex;
     button.setAttribute("aria-label", `${name} ${hex}`);
     button.querySelector("span").style.setProperty("--swatch-color", hex);
@@ -510,7 +511,7 @@ const renderColorChoices = (selected = []) => {
     });
     sync();
   };
-  productForm.elements.colors.value = uniqueSelected.map((color) => `${color.name} | ${color.hex}`).join("\n");
+  productForm.elements.colors.value = uniqueSelected.map((color) => `${color === activeCustom ? "Personalizado" : color.name} | ${color.hex}`).join("\n");
 };
 
 const perfumeFamilies = ["Cítrica", "Floral", "Amaderada", "Aromática", "Acuática", "Oriental / ambarada", "Gourmand", "Chipre"];
