@@ -410,13 +410,21 @@ const openCategoryPicker = async () => {
 
 const transitionToProductForm = async (category) => {
   const picker = categoryDialog.querySelector(".admin-category-picker");
-  if (!matchMedia("(prefers-reduced-motion: reduce)").matches && picker.animate) {
-    await picker.animate([{ opacity: 1, transform: "translateY(0) scale(1)" }, { opacity: 0, transform: "translateY(8px) scale(.985)" }], { duration: 160, easing: "cubic-bezier(0.23, 1, 0.32, 1)" }).finished.catch(() => {});
+  try {
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches && picker?.animate) {
+      const animation = picker.animate([{ opacity: 1, transform: "translateY(0) scale(1)" }, { opacity: 0, transform: "translateY(8px) scale(.985)" }], { duration: 160, easing: "cubic-bezier(0.23, 1, 0.32, 1)" });
+      await Promise.race([animation.finished.catch(() => {}), new Promise((resolve) => setTimeout(resolve, 190))]);
+    }
+  } catch {
+    // La animación es decorativa: un fallo del navegador no debe bloquear el formulario.
   }
-  categoryDialog.close();
-  openProductForm(null, category);
-  renderCategoryFields({}, true);
-  productForm.elements.name.focus();
+  try {
+    if (categoryDialog.open) categoryDialog.close();
+    openProductForm(null, category);
+  } catch (error) {
+    showMessage(`No se pudo abrir el formulario: ${error.message}`, true);
+    if (!categoryDialog.open) categoryDialog.showModal();
+  }
 };
 
 const renderImagePreviews = (animate = false) => {
@@ -706,7 +714,10 @@ $("#adminCancelNewCategory").addEventListener("click", () => {
 });
 categoryChoices.addEventListener("click", (event) => {
   const choice = event.target.closest("[data-category-choice]");
-  if (choice) transitionToProductForm(choice.dataset.categoryChoice);
+  if (choice) {
+    choice.disabled = true;
+    transitionToProductForm(choice.dataset.categoryChoice).finally(() => { choice.disabled = false; });
+  }
 });
 $("#adminNewCategoryForm").addEventListener("submit", async (event) => {
   event.preventDefault();
