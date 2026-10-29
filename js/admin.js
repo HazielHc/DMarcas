@@ -568,7 +568,7 @@ const renderCategoryFields = (details = {}, animate = false) => {
   const typeOptions = config.types.map((type) => `<option${(details.type === type || details.concentration === type) ? " selected" : ""}>${escapeHtml(type.trim())}</option>`).join("");
   const perfumeFields = category === "Perfumes" ? `
     <label class="admin-field">Concentración<select class="admin-input" name="concentration"><option value="">Selecciona una opción</option>${config.types.map((value) => `<option${(details.concentration === value || details.type === value) ? " selected" : ""}>${value}</option>`).join("")}</select><span class="admin-field-help">Parfum, Eau de parfum, Eau de toilette o Body mist.</span></label>
-    <div class="admin-field admin-field-wide"><span>Familia olfativa</span><div class="admin-family-choices" role="group" aria-label="Familia olfativa">${familyOptions.map((family) => `<button type="button" class="admin-choice-chip" data-family="${escapeHtml(family)}" aria-pressed="${details.fragranceFamily === family}">${escapeHtml(family)}${details.fragranceFamily === family ? ' <span class="admin-family-selected">Elegida</span>' : ""}</button>`).join("")}</div><p class="admin-family-recommendation" id="adminFamilyRecommendation" aria-live="polite"></p><button class="admin-family-add-toggle" type="button" id="adminFamilyAddToggle"><span aria-hidden="true">+</span> Agregar familia</button><form class="admin-family-add-form" id="adminFamilyAddForm" hidden><label class="admin-field" for="adminNewFamilyName">Nueva familia<input class="admin-input" id="adminNewFamilyName" name="name" maxlength="80" required placeholder="Ej. Especiada" /></label><div><button class="admin-button admin-button-quiet" type="button" id="adminFamilyAddCancel">Cancelar</button><button class="admin-button admin-button-primary" type="submit">Guardar familia</button></div><p class="admin-family-add-message" role="status" aria-live="polite"></p></form><input type="hidden" name="fragranceFamily" value="${escapeHtml(details.fragranceFamily || "")}" /></div>` : "";
+    <div class="admin-field admin-field-wide"><span>Familia olfativa</span><div class="admin-family-choices" role="group" aria-label="Familia olfativa">${familyOptions.map((family) => `<button type="button" class="admin-choice-chip" data-family="${escapeHtml(family)}" aria-pressed="${details.fragranceFamily === family}">${escapeHtml(family)}${details.fragranceFamily === family ? ' <span class="admin-family-selected">Elegida</span>' : ""}</button>`).join("")}</div><p class="admin-family-recommendation" id="adminFamilyRecommendation" aria-live="polite"></p><button class="admin-family-add-toggle" type="button" id="adminFamilyAddToggle"><span aria-hidden="true">+</span> Agregar familia</button><div class="admin-family-add-form" id="adminFamilyAddForm" role="group" aria-label="Agregar familia olfativa" hidden><label class="admin-field" for="adminNewFamilyName">Nueva familia<input class="admin-input" id="adminNewFamilyName" name="name" maxlength="80" required placeholder="Ej. Especiada" /></label><div><button class="admin-button admin-button-quiet" type="button" id="adminFamilyAddCancel">Cancelar</button><button class="admin-button admin-button-primary" type="button" id="adminFamilySave">Guardar familia</button></div><p class="admin-family-add-message" role="status" aria-live="polite"></p></div><input type="hidden" name="fragranceFamily" value="${escapeHtml(details.fragranceFamily || "")}" /></div>` : "";
   const sharedFields = category === "Perfumes" ? "" : `<label class="admin-field">Material<input class="admin-input" name="material" maxlength="100" value="${escapeHtml(details.material || "")}" placeholder="Algodón, piel, metal…" /></label>`;
   const typeLabel = category === "Ropa" ? "Tipo de prenda" : category === "Calzado" ? "Tipo de calzado" : category === "Accesorios" ? "Tipo de accesorio" : "Tipo de producto";
   const typeField = category === "Perfumes" ? "" : `<label class="admin-field">${typeLabel}<select class="admin-input" name="productType"><option value="">Selecciona una opción</option>${typeOptions}</select></label>`;
@@ -616,14 +616,16 @@ const renderCategoryFields = (details = {}, animate = false) => {
       if (!familyForm.hidden) $("#adminNewFamilyName").focus();
     });
     $("#adminFamilyAddCancel").addEventListener("click", () => { familyForm.reset(); familyForm.hidden = true; });
-    familyForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const submit = familyForm.querySelector('[type="submit"]');
+    const saveFamilyButton = $("#adminFamilySave");
+    const saveFamily = async () => {
+      const nameInput = $("#adminNewFamilyName");
+      if (!nameInput.value.trim()) { nameInput.reportValidity(); return; }
+      const submit = saveFamilyButton;
       const message = $("#adminFamilyAddForm .admin-family-add-message");
       submit.disabled = true;
       message.textContent = "";
       try {
-        const result = await adminFetch("/api/admin/fragrance-families", { method: "POST", body: JSON.stringify({ name: $("#adminNewFamilyName").value }) });
+        const result = await adminFetch("/api/admin/fragrance-families", { method: "POST", body: JSON.stringify({ name: nameInput.value }) });
         fragranceFamilyCache = result.families;
         let familyButton = [...categoryFields.querySelectorAll("[data-family]")].find((button) => button.dataset.family === result.family);
         if (!familyButton) {
@@ -637,13 +639,17 @@ const renderCategoryFields = (details = {}, animate = false) => {
           categoryFields.querySelector(".admin-family-choices").append(familyButton);
         }
         chooseFamily(familyButton);
-        familyForm.reset();
+        nameInput.value = "";
         familyForm.hidden = true;
       } catch (error) {
         message.textContent = error.message;
       } finally {
         submit.disabled = false;
       }
+    };
+    saveFamilyButton.addEventListener("click", saveFamily);
+    $("#adminNewFamilyName").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") { event.preventDefault(); saveFamilyButton.click(); }
     });
     productForm.elements.name.oninput = paintRecommendation;
   }
