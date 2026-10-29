@@ -17,9 +17,9 @@ export const CONFIG = {
   
   // Redes Sociales oficiales
   social: {
-    instagram: "https://www.instagram.com/dm.diversas.marcas/",
+    instagram: "https://www.instagram.com/diversas._marcas/",
     instagramName: "Diversas Marcas",
-    instagramHandle: "@dm.diversas.marcas",
+    instagramHandle: "@diversas._marcas",
     facebook: "https://facebook.com/diversasmarcas",
     tiktok: "https://tiktok.com/@diversasmarcas"
   },
