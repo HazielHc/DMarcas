@@ -90,7 +90,7 @@ adminOverlay.innerHTML = `
               <div class="admin-field admin-field-wide" id="adminCategoryFields" hidden></div>
               <input type="hidden" name="categoryDetails" value="{}" />
               <div class="admin-field" id="adminPresentationChoices"><span>Presentaciones</span><input type="hidden" name="sizes" /><div class="admin-choice-grid" data-choice-group="presentation" aria-label="Presentaciones disponibles"></div><span class="admin-field-help">Selecciona una o varias opciones.</span></div>
-              <div class="admin-field" id="adminColorChoices"><span>Colores principales</span><input type="hidden" name="colors" /><div class="admin-color-grid" data-choice-group="color" aria-label="Colores del producto"></div><label class="admin-color-custom">Otro color<input type="color" id="adminCustomColor" value="#6b7280" aria-label="Elegir otro color" /></label><span class="admin-field-help">Puedes seleccionar varios colores.</span></div>
+              <div class="admin-field" id="adminColorChoices"><span>Colores principales</span><input type="hidden" name="colors" /><div class="admin-color-grid" data-choice-group="color" aria-label="Colores del producto"></div><div class="admin-custom-color-controls"><div class="admin-custom-color-slots" id="adminCustomColorSlots"></div><button type="button" class="admin-custom-color-add" id="adminAddCustomColor"><span aria-hidden="true">+</span> Agregar otro color</button></div><span class="admin-field-help">Selecciona colores de la paleta o agrega los tuyos.</span></div>
             </div>
           </section>
           <section class="admin-form-section" aria-labelledby="adminPriceTitle">
@@ -461,57 +461,71 @@ const renderPresentationChoices = (selected = []) => {
 
 const renderColorChoices = (selected = []) => {
   const group = $("#adminColorChoices [data-choice-group]");
+  const customSlots = $("#adminCustomColorSlots");
   const isBuiltIn = (color) => colorOptions.some(([, hex]) => hex.toLowerCase() === String(color?.hex).toLowerCase());
-  const customColors = selected.filter((color) => color?.hex && (color.name === "Personalizado" || !isBuiltIn(color)));
-  const activeCustom = customColors.at(-1) || null;
-  const cleanSelected = selected.filter((color) => color?.hex && (isBuiltIn(color) || color === activeCustom));
-  const uniqueSelected = [...new Map(cleanSelected.map((color) => [String(color.hex).toLowerCase(), color])).values()];
-  const selectedHexes = new Set(uniqueSelected.map((color) => String(color.hex).toLowerCase()));
+  const numberedCustomColors = selected.filter((color) => color?.hex && /^Personalizado\s+\d+$/i.test(color.name || ""));
+  const legacyCustomColors = selected.filter((color) => color?.hex && color.name === "Personalizado");
+  const otherCustomColors = selected.filter((color) => color?.hex && !isBuiltIn(color) && !/^Personalizado(?:\s+\d+)?$/i.test(color.name || ""));
+  // Collapse accidental legacy swatches into their most recent value. Numbered entries are explicit + clicks.
+  const customColors = [...otherCustomColors, ...numberedCustomColors, ...(!numberedCustomColors.length && !otherCustomColors.length ? legacyCustomColors.slice(-1) : [])];
+  const uniqueCustomColors = [...new Map(customColors.map((color) => [String(color.hex).toLowerCase(), color])).values()];
+  const customHexes = new Set(uniqueCustomColors.map((color) => String(color.hex).toLowerCase()));
+  const builtInColors = selected.filter((color) => color?.hex && isBuiltIn(color) && !customHexes.has(String(color.hex).toLowerCase()) && !/^Personalizado(?:\s+\d+)?$/i.test(color.name || ""));
+  const selectedBuiltInHexes = new Set(builtInColors.map((color) => String(color.hex).toLowerCase()));
   group.innerHTML = colorOptions.map(([name, hex]) => {
-    const active = selectedHexes.has(hex.toLowerCase());
+    const active = selectedBuiltInHexes.has(hex.toLowerCase());
     return `<button type="button" class="admin-color-swatch${active ? " is-selected" : ""}" data-color-name="${escapeHtml(name)}" data-color-hex="${escapeHtml(hex)}" aria-label="${escapeHtml(name)}" aria-pressed="${active}"><span style="--swatch-color:${escapeHtml(hex)}"></span><small>${escapeHtml(name)}</small></button>`;
   }).join("");
-  const customHex = activeCustom?.hex || "#6b7280";
-  const customButton = document.createElement("button");
-  customButton.type = "button";
-  customButton.className = `admin-color-swatch${activeCustom ? " is-selected" : ""}`;
-  customButton.dataset.customColor = "true";
-  customButton.dataset.colorName = "Personalizado";
-  customButton.dataset.colorHex = customHex;
-  customButton.setAttribute("aria-label", `Personalizado ${customHex}`);
-  customButton.setAttribute("aria-pressed", String(Boolean(activeCustom)));
-  customButton.innerHTML = `<span style="--swatch-color:${customHex}"></span><small>Personalizado</small>`;
-  group.append(customButton);
-  const colorPicker = $("#adminCustomColor");
-  colorPicker.value = /^#[\da-f]{6}$/i.test(customHex) ? customHex : "#6b7280";
+  customSlots.innerHTML = "";
+  let nextCustomId = uniqueCustomColors.reduce((highest, color) => Math.max(highest, Number(color.name.match(/\d+/)?.[0] || 0)), 0) + 1;
+  let slotsToRender = uniqueCustomColors.map((color) => ({ name: color.name === "Personalizado" ? "Personalizado 1" : color.name, hex: color.hex, selected: true }));
+  if (!slotsToRender.length) slotsToRender = [{ name: "Personalizado 1", hex: "#6b7280", selected: false }];
   const sync = () => {
     const selectedColors = [...group.querySelectorAll('[aria-pressed="true"]')];
-    const colors = [...new Map(selectedColors.map((button) => [button.dataset.colorHex.toLowerCase(), `${button.dataset.colorName} | ${button.dataset.colorHex}`])).values()];
+    const customSelections = [...customSlots.querySelectorAll('[aria-pressed="true"]')];
+    const colors = [...new Map([...selectedColors, ...customSelections].map((button) => [button.dataset.colorHex.toLowerCase(), `${button.dataset.colorName} | ${button.dataset.colorHex}`])).values()];
     productForm.elements.colors.value = colors.join("\n");
   };
-  const bindColorToggle = (button) => button.addEventListener("click", () => {
+  const bindColorToggle = (button, allSwatches = group) => button.addEventListener("click", () => {
     button.classList.toggle("is-selected");
     button.setAttribute("aria-pressed", String(button.classList.contains("is-selected")));
+    if (button.classList.contains("is-selected")) allSwatches.querySelectorAll(`[data-color-hex="${button.dataset.colorHex}"]`).forEach((other) => {
+      if (other !== button) { other.classList.remove("is-selected"); other.setAttribute("aria-pressed", "false"); }
+    });
     sync();
   });
   group.querySelectorAll("[data-color-hex]").forEach(bindColorToggle);
-  bindColorToggle(customButton);
-  colorPicker.oninput = (event) => {
-    const hex = event.target.value;
-    const name = "Personalizado";
-    const button = group.querySelector('[data-custom-color="true"]');
-    button.dataset.colorHex = hex;
-    button.setAttribute("aria-label", `${name} ${hex}`);
-    button.querySelector("span").style.setProperty("--swatch-color", hex);
-    button.classList.add("is-selected");
-    button.setAttribute("aria-pressed", "true");
-    group.querySelectorAll(`[data-color-hex="${hex}"]:not([data-custom-color="true"])`).forEach((paletteColor) => {
-      paletteColor.classList.remove("is-selected");
-      paletteColor.setAttribute("aria-pressed", "false");
+  const addCustomSlot = ({ name, hex, selected: isSelected } = {}) => {
+    const slotName = name || `Personalizado ${nextCustomId++}`;
+    nextCustomId = Math.max(nextCustomId, Number(slotName.match(/\d+/)?.[0] || 0) + 1);
+    const slotHex = /^#[\da-f]{6}$/i.test(hex || "") ? hex : "#6b7280";
+    const slot = document.createElement("div");
+    slot.className = "admin-custom-color-slot";
+    slot.innerHTML = `<button type="button" class="admin-color-swatch${isSelected ? " is-selected" : ""}" data-custom-color="true" data-color-name="${escapeHtml(slotName)}" data-color-hex="${slotHex}" aria-label="${escapeHtml(slotName)} ${slotHex}" aria-pressed="${Boolean(isSelected)}"><span style="--swatch-color:${slotHex}"></span><small>${escapeHtml(slotName)}</small></button><input type="color" value="${slotHex}" aria-label="Elegir ${escapeHtml(slotName)}" /><button type="button" class="admin-custom-color-remove" aria-label="Quitar ${escapeHtml(slotName)}">×</button>`;
+    const swatch = slot.querySelector(".admin-color-swatch");
+    const picker = slot.querySelector('input[type="color"]');
+    bindColorToggle(swatch, customSlots);
+    picker.addEventListener("input", () => {
+      const color = picker.value;
+      swatch.dataset.colorHex = color;
+      swatch.setAttribute("aria-label", `${slotName} ${color}`);
+      swatch.querySelector("span").style.setProperty("--swatch-color", color);
+      swatch.classList.add("is-selected");
+      swatch.setAttribute("aria-pressed", "true");
+      group.querySelectorAll(`[data-color-hex="${color}"]`).forEach((other) => { other.classList.remove("is-selected"); other.setAttribute("aria-pressed", "false"); });
+      customSlots.querySelectorAll(`[data-color-hex="${color}"]`).forEach((other) => { if (other !== swatch) { other.classList.remove("is-selected"); other.setAttribute("aria-pressed", "false"); } });
+      sync();
     });
-    sync();
+    slot.querySelector(".admin-custom-color-remove").addEventListener("click", () => { slot.remove(); sync(); });
+    customSlots.append(slot);
   };
-  productForm.elements.colors.value = uniqueSelected.map((color) => `${color === activeCustom ? "Personalizado" : color.name} | ${color.hex}`).join("\n");
+  slotsToRender.forEach(addCustomSlot);
+  $("#adminAddCustomColor").onclick = () => {
+    const name = `Personalizado ${nextCustomId++}`;
+    addCustomSlot({ name, hex: "#6b7280", selected: false });
+    customSlots.lastElementChild?.querySelector('input[type="color"]')?.focus();
+  };
+  sync();
 };
 
 const perfumeFamilies = ["Cítrica", "Floral", "Amaderada", "Aromática", "Acuática", "Oriental / ambarada", "Gourmand", "Chipre"];

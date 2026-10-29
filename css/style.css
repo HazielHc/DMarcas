@@ -849,11 +849,23 @@ input[type="checkbox"] { border-radius: var(--ui-radius-pill); }
 .admin-family-recommendation { min-height: 21px; margin: 8px 0 0; color: var(--admin-muted); font-size: 13px; font-weight: 500; }
 .admin-color-grid { gap: 10px; }
 .admin-color-swatch { display: grid; min-width: 58px; min-height: 64px; justify-items: center; align-content: center; gap: 4px; padding: 5px 7px; border: 1px solid transparent; border-radius: 9px; background: transparent; color: var(--admin-ink); cursor: pointer; }
-.admin-color-swatch > span { width: 28px; height: 28px; border: 1px solid rgb(17 18 20 / .24); border-radius: 50%; background: var(--swatch-color); }
+.admin-color-swatch > span { width: 28px; height: 28px; border: 1px solid rgb(17 18 20 / .24); border-radius: 50%; background: var(--swatch-color); transition: transform 160ms ease; }
 .admin-color-swatch small { font-size: 11px; line-height: 1.1; }
 .admin-color-swatch.is-selected { border-color: var(--admin-ink); background: #f6f6f5; }
-.admin-color-custom { display: inline-flex; min-height: 44px; align-items: center; gap: 9px; margin-top: 8px; color: var(--admin-ink); font-size: 13px; font-weight: 600; cursor: pointer; }
-.admin-color-custom input { width: 36px; height: 36px; padding: 2px; border: 1px solid var(--admin-line-strong); border-radius: 8px; background: #fff; }
+.admin-custom-color-controls { display: grid; justify-items: start; gap: 8px; margin-top: 4px; }
+.admin-custom-color-slots { display: flex; flex-wrap: wrap; gap: 10px; }
+.admin-custom-color-slot { display: grid; grid-template-columns: 74px 40px 36px; align-items: center; gap: 8px; padding: 7px; border: 1px solid var(--admin-line); border-radius: 10px; background: #fff; }
+.admin-custom-color-slot .admin-color-swatch { min-width: 66px; min-height: 58px; }
+.admin-custom-color-slot input[type="color"] { width: 36px; height: 36px; padding: 2px; border: 1px solid var(--admin-line-strong); border-radius: 8px; background: #fff; cursor: pointer; }
+.admin-custom-color-add,.admin-custom-color-remove { min-width: 44px; min-height: 44px; border: 1px solid var(--admin-line-strong); border-radius: 9px; background: #fff; color: var(--admin-ink); font: 600 13px/1 Inter,system-ui,sans-serif; cursor: pointer; }
+.admin-custom-color-add { display: inline-flex; align-items: center; gap: 7px; padding: 0 12px; }
+.admin-custom-color-add > span { font-size: 20px; font-weight: 400; }
+.admin-custom-color-remove { font-size: 21px; font-weight: 400; }
+.admin-custom-color-add:hover,.admin-custom-color-remove:hover { border-color: var(--admin-ink); background: #f6f6f5; }
+.admin-custom-color-add:focus-visible,.admin-custom-color-remove:focus-visible { outline: 3px solid var(--admin-ink); outline-offset: 3px; }
+@media (hover: hover) and (pointer: fine) {
+  .admin-color-swatch:hover > span { transform: scale(1.12) rotate(-6deg); }
+}
 .admin-flags { gap: 8px 18px; margin: 20px 0; border-color: var(--admin-line); border-radius: 10px; }
 .admin-flags legend { color: var(--admin-ink); }
 .admin-flags label { color: var(--admin-ink); }
@@ -911,7 +923,7 @@ input[type="checkbox"] { border-radius: var(--ui-radius-pill); }
 }
 @media (prefers-reduced-motion: reduce) {
   .admin-product-dialog[open],.admin-category-dialog[open] { animation-duration: 1ms; }
-  .admin-button,.admin-category-choice { transition-duration: 1ms; }
+  .admin-button,.admin-category-choice,.admin-color-swatch > span { transition-duration: 1ms; }
 }
 @media (prefers-reduced-motion: no-preference) { .admin-login-copy { animation: admin-hero-copy .6s cubic-bezier(.22,1,.36,1) both; } .admin-login-card { animation: admin-hero-card .6s .08s cubic-bezier(.22,1,.36,1) both; } .admin-image-steps li { transition: border-color .16s ease,background-color .16s ease; } }
 @keyframes admin-hero-copy { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
