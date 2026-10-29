@@ -68,7 +68,7 @@ adminOverlay.innerHTML = `
     </dialog>
 
     <dialog class="admin-product-dialog" id="adminProductDialog" aria-labelledby="adminFormTitle">
-      <form class="admin-product-form" id="adminProductForm">
+      <form class="admin-product-form" id="adminProductForm" novalidate>
         <header class="admin-form-header">
           <div><p class="admin-eyebrow" id="adminFormEyebrow">Nuevo producto</p><h3 id="adminFormTitle">Agregar producto</h3><p class="admin-form-subtitle">Completa los datos principales y revisa los detalles antes de guardar.</p></div>
           <button class="admin-close admin-form-close" type="button" id="adminFormClose" aria-label="Cerrar formulario">×</button>
@@ -116,6 +116,7 @@ adminOverlay.innerHTML = `
           <label><input type="checkbox" name="featured" /> Destacado <span class="admin-flag-help">Muestra “Selección DM” en la foto.</span></label>
         </fieldset>
         <div class="admin-form-footer">
+          <p class="admin-product-form-message" id="adminProductFormMessage" role="alert" aria-live="assertive" hidden></p>
           <button class="admin-button admin-button-quiet" type="button" id="adminCancelForm">Cancelar</button>
           <button class="admin-button admin-button-primary" type="submit" id="adminSaveProduct">Guardar producto</button>
         </div>
@@ -134,6 +135,7 @@ const productDialog = $("#adminProductDialog");
 const categoryDialog = $("#adminCategoryDialog");
 const categoryChoices = $("#adminCategoryChoices");
 const productForm = $("#adminProductForm");
+const productFormMessage = $("#adminProductFormMessage");
 const adminNav = $(".admin-nav");
 const imagePreview = $("#adminImagePreview");
 const imageFiles = $("#adminImageFiles");
@@ -575,7 +577,7 @@ const renderCategoryFields = (details = {}, animate = false) => {
   const typeOptions = config.types.map((type) => `<option${(details.type === type || details.concentration === type) ? " selected" : ""}>${escapeHtml(type.trim())}</option>`).join("");
   const perfumeFields = category === "Perfumes" ? `
     <label class="admin-field">Concentración<select class="admin-input" name="concentration"><option value="">Selecciona una opción</option>${config.types.map((value) => `<option${(details.concentration === value || details.type === value) ? " selected" : ""}>${value}</option>`).join("")}</select><span class="admin-field-help">Parfum, Eau de parfum, Eau de toilette o Body mist.</span></label>
-    <div class="admin-field admin-field-wide"><span>Familia olfativa</span><div class="admin-family-choices" role="group" aria-label="Familia olfativa">${familyOptions.map((family) => `<button type="button" class="admin-choice-chip" data-family="${escapeHtml(family)}" aria-pressed="${details.fragranceFamily === family}">${escapeHtml(family)}${details.fragranceFamily === family ? ' <span class="admin-family-selected">Elegida</span>' : ""}</button>`).join("")}</div><p class="admin-family-recommendation" id="adminFamilyRecommendation" aria-live="polite"></p><button class="admin-family-add-toggle" type="button" id="adminFamilyAddToggle"><span aria-hidden="true">+</span> Agregar familia</button><div class="admin-family-add-form" id="adminFamilyAddForm" role="group" aria-label="Agregar familia olfativa" hidden><label class="admin-field" for="adminNewFamilyName">Nueva familia<input class="admin-input" id="adminNewFamilyName" name="name" maxlength="80" required placeholder="Ej. Especiada" /></label><div><button class="admin-button admin-button-quiet" type="button" id="adminFamilyAddCancel">Cancelar</button><button class="admin-button admin-button-primary" type="button" id="adminFamilySave">Guardar familia</button></div><p class="admin-family-add-message" role="status" aria-live="polite"></p></div><input type="hidden" name="fragranceFamily" value="${escapeHtml(details.fragranceFamily || "")}" /></div>` : "";
+    <div class="admin-field admin-field-wide"><span>Familia olfativa</span><div class="admin-family-choices" role="group" aria-label="Familia olfativa">${familyOptions.map((family) => `<button type="button" class="admin-choice-chip" data-family="${escapeHtml(family)}" aria-pressed="${details.fragranceFamily === family}">${escapeHtml(family)}${details.fragranceFamily === family ? ' <span class="admin-family-selected">Elegida</span>' : ""}</button>`).join("")}</div><p class="admin-family-recommendation" id="adminFamilyRecommendation" aria-live="polite"></p><button class="admin-family-add-toggle" type="button" id="adminFamilyAddToggle"><span aria-hidden="true">+</span> Agregar familia</button><div class="admin-family-add-form" id="adminFamilyAddForm" role="group" aria-label="Agregar familia olfativa" hidden><label class="admin-field" for="adminNewFamilyName">Nueva familia<input class="admin-input" id="adminNewFamilyName" name="newFamilyName" maxlength="80" placeholder="Ej. Especiada" /></label><div><button class="admin-button admin-button-quiet" type="button" id="adminFamilyAddCancel">Cancelar</button><button class="admin-button admin-button-primary" type="button" id="adminFamilySave">Guardar familia</button></div><p class="admin-family-add-message" role="status" aria-live="polite"></p></div><input type="hidden" name="fragranceFamily" value="${escapeHtml(details.fragranceFamily || "")}" /></div>` : "";
   const sharedFields = category === "Perfumes" ? "" : `<label class="admin-field">Material<input class="admin-input" name="material" maxlength="100" value="${escapeHtml(details.material || "")}" placeholder="Algodón, piel, metal…" /></label>`;
   const typeLabel = category === "Ropa" ? "Tipo de prenda" : category === "Calzado" ? "Tipo de calzado" : category === "Accesorios" ? "Tipo de accesorio" : "Tipo de producto";
   const typeField = category === "Perfumes" ? "" : `<label class="admin-field">${typeLabel}<select class="admin-input" name="productType"><option value="">Selecciona una opción</option>${typeOptions}</select></label>`;
@@ -620,9 +622,16 @@ const renderCategoryFields = (details = {}, animate = false) => {
     const familyForm = $("#adminFamilyAddForm");
     $("#adminFamilyAddToggle").addEventListener("click", () => {
       familyForm.hidden = !familyForm.hidden;
-      if (!familyForm.hidden) $("#adminNewFamilyName").focus();
+      const nameInput = $("#adminNewFamilyName");
+      nameInput.required = !familyForm.hidden;
+      if (!familyForm.hidden) nameInput.focus();
     });
-    $("#adminFamilyAddCancel").addEventListener("click", () => { familyForm.reset(); familyForm.hidden = true; });
+    $("#adminFamilyAddCancel").addEventListener("click", () => {
+      const nameInput = $("#adminNewFamilyName");
+      nameInput.value = "";
+      nameInput.required = false;
+      familyForm.hidden = true;
+    });
     const saveFamilyButton = $("#adminFamilySave");
     const saveFamily = async () => {
       const nameInput = $("#adminNewFamilyName");
@@ -647,6 +656,7 @@ const renderCategoryFields = (details = {}, animate = false) => {
         }
         chooseFamily(familyButton);
         nameInput.value = "";
+        nameInput.required = false;
         familyForm.hidden = true;
       } catch (error) {
         message.textContent = error.message;
@@ -857,10 +867,19 @@ productList.addEventListener("click", async (event) => {
 
 productForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  if (!productForm.reportValidity()) return;
+  productFormMessage.hidden = true;
+  productFormMessage.textContent = "";
+  const invalidField = [...productForm.elements].find((field) => field.willValidate && !field.validity.valid);
+  if (invalidField) {
+    const fieldLabel = invalidField.labels?.[0]?.childNodes[0]?.textContent.trim() || invalidField.name || "un campo";
+    productFormMessage.textContent = `Revisa “${fieldLabel}”: ${invalidField.validationMessage}`;
+    productFormMessage.hidden = false;
+    if (!invalidField.closest("[hidden]")) invalidField.focus();
+    return;
+  }
   const submitButton = $("#adminSaveProduct");
   submitButton.disabled = true;
-  showMessage("");
+  productFormMessage.hidden = true;
   const uploadedPaths = [];
   let productSaved = false;
   try {
@@ -884,7 +903,8 @@ productForm.addEventListener("submit", async (event) => {
       await Promise.allSettled(uploadedPaths.map((imagePath) => adminFetch(`/api/admin/uploads/product-image?path=${encodeURIComponent(imagePath)}`, { method: "DELETE" })));
       imageEntries.forEach((entry) => { if (uploadedPaths.includes(entry.src)) entry.src = ""; });
       renderImagePreviews();
-      showMessage(error.message, true);
+      productFormMessage.textContent = error.message;
+      productFormMessage.hidden = false;
     } else {
       showMessage("El producto se guardó, pero no se pudo actualizar la lista. Recarga el panel.", true);
     }

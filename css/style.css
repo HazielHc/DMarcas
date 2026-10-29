@@ -880,8 +880,10 @@ input[type="checkbox"] { border-radius: var(--ui-radius-pill); }
 .admin-flags label { color: var(--admin-ink); }
 .admin-flags input { accent-color: var(--admin-ink); }
 .admin-flag-help { color: var(--admin-muted); }
-.admin-form-footer { position: sticky; bottom: 0; z-index: 2; margin: 0 calc(-1 * clamp(18px,4vw,36px)); padding: 14px clamp(18px,4vw,36px) 2px; background: rgb(255 255 255 / .98); border-top: 1px solid var(--admin-line); }
+.admin-form-footer { position: sticky; bottom: 0; z-index: 2; display: flex; flex-wrap: wrap; margin: 0 calc(-1 * clamp(18px,4vw,36px)); padding: 14px clamp(18px,4vw,36px) 2px; background: rgb(255 255 255 / .98); border-top: 1px solid var(--admin-line); }
 .admin-form-footer .admin-button { min-width: 124px; }
+.admin-product-form-message { flex: 1 0 100%; margin: 0; padding: 10px 12px; border: 1px solid #b42318; border-radius: 8px; background: #fff4f2; color: #761d1d; font-size: 14px; font-weight: 600; line-height: 1.45; }
+.admin-product-form-message[hidden] { display: none; }
 .admin-category-picker .admin-form-header { margin-bottom: 10px; }
 .admin-category-intro { color: var(--admin-muted); }
 .admin-category-choice { border-color: var(--admin-line); color: var(--admin-ink); }
