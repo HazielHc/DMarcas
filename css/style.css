@@ -2161,3 +2161,84 @@ input[type="checkbox"] { border-radius: var(--ui-radius-pill); }
   #catalogoSection .product-card-price,
   #catalogoSection .product-card-brand { color: #111214; }
 }
+
+/* Esquinas y encuadre compartidos para las galerías públicas y del administrador. */
+.product-card,
+.product-card-anim {
+  overflow: hidden;
+  border-radius: 20px !important;
+}
+.product-card-media,
+.mobile-category-image {
+  overflow: hidden;
+  border-radius: 19px 19px 0 0;
+}
+.product-image-trigger,
+.mobile-category-image img {
+  overflow: hidden;
+  border-radius: inherit !important;
+}
+.product-card .product-image-trigger img,
+.mobile-category-image img,
+.product-detail-image-wrap img,
+.product-detail-thumbnails .modal-thumb img,
+.modal-thumb img,
+.admin-product-image img,
+.admin-image-preview img,
+.admin-image-item img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+.product-detail-gallery { padding: 16px; background: #fff; }
+.product-detail-image-wrap {
+  overflow: hidden;
+  border-radius: 20px;
+  background: #fff;
+}
+.product-detail-thumbnails .modal-thumb,
+.modal-thumb,
+.admin-image-preview img,
+.admin-image-item img,
+.admin-product-image {
+  overflow: hidden;
+  border-radius: 14px;
+}
+.product-detail-thumbnails .modal-thumb { border-radius: 14px; }
+.product-detail-thumbnails .modal-thumb img,
+.modal-thumb img,
+.admin-image-preview img,
+.admin-image-item img,
+.admin-product-image img { border-radius: inherit; }
+.admin-image-preview img,
+.admin-image-item img { background: #fff; }
+.admin-image-preview img,
+.admin-image-item img {
+  height: auto;
+  aspect-ratio: 1 / 1;
+}
+
+@media (max-width: 767px) {
+  .product-detail-gallery { padding: 8px 12px 0; }
+  .product-detail-image-wrap {
+    max-height: min(44dvh, 380px);
+    aspect-ratio: 1.08 / 1;
+    border-radius: 18px;
+  }
+  .product-detail-thumbnails { gap: 8px; padding: 10px 0 0; }
+  .product-detail-thumbnails .modal-thumb { border-radius: 12px; }
+  .mobile-search-results-grid .product-card {
+    overflow: hidden;
+    border: 1px solid #e2e3e5;
+    border-radius: 16px !important;
+    background: #fff;
+  }
+  .mobile-search-results-grid .product-card-media,
+  .mobile-search-results-grid .product-image-trigger,
+  .mobile-search-results-grid .product-image-trigger img {
+    overflow: hidden;
+    border-radius: 15px 15px 0 0 !important;
+    object-fit: cover;
+  }
+}
