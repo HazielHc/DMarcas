@@ -421,9 +421,16 @@ const transitionToProductForm = async (category) => {
   try {
     if (categoryDialog.open) categoryDialog.close();
     openProductForm(null, category);
+    if (categoryDialog.open) categoryDialog.close();
+    showMessage("");
   } catch (error) {
+    if (productDialog.open) {
+      if (categoryDialog.open) categoryDialog.close();
+      showMessage("");
+      return;
+    }
     showMessage(`No se pudo abrir el formulario: ${error.message}`, true);
-    if (!categoryDialog.open) categoryDialog.showModal();
+    if (!categoryDialog.open && !productDialog.open) categoryDialog.showModal();
   }
 };
 
