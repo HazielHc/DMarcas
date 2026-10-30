@@ -220,7 +220,6 @@ document.addEventListener("DOMContentLoaded", () => {
     mobileCategoryGroupId: null,
     selectedBrand: "all",
     searchQuery: "",
-    sortBy: "featured",
     onlySale: false,
     
     // Modal de producto activo
@@ -257,7 +256,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const mobileCategoryCount = document.getElementById("mobileCategoryCount");
   const mobileCategoryGroups = new Map();
   const brandSelect = document.getElementById("brandSelect");
-  const sortSelect = document.getElementById("sortSelect");
   const saleOnlyCheckbox = document.getElementById("saleOnlyCheckbox");
   const brandChips = document.querySelectorAll(".brand-chip-btn");
 
@@ -492,34 +490,15 @@ document.addEventListener("DOMContentLoaded", () => {
       );
     }
 
-    // Ordenamiento
-    switch (state.sortBy) {
-      case "price-asc":
-        result.sort((a, b) => a.offerPrice - b.offerPrice);
-        break;
-      case "price-desc":
-        result.sort((a, b) => b.offerPrice - a.offerPrice);
-        break;
-      case "discount":
-        result.sort((a, b) => {
-          const discount = (product) => Number(product.regularPrice) > 0
-            ? Math.max(0, (Number(product.regularPrice) - Number(product.offerPrice)) / Number(product.regularPrice))
-            : 0;
-          const discA = discount(a);
-          const discB = discount(b);
-          return discB - discA;
-        });
-        break;
-      case "newest":
-        result.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));
-        break;
-      case "featured":
-      default:
-        result.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
-        break;
-    }
+    // Ordena por marca y después por nombre para mantener juntas las marcas.
+    const compareAlphabetically = (left, right) => String(left ?? "").localeCompare(String(right ?? ""), "es-MX", {
+      sensitivity: "base",
+      numeric: true
+    });
+    result.sort((a, b) => compareAlphabetically(a.brand, b.brand)
+      || compareAlphabetically(a.name, b.name)
+      || compareAlphabetically(a.id, b.id));
 
-    // Mantén juntas las tarjetas de una misma marca sin cambiar su orden interno.
     const productsByBrand = new Map();
     result.forEach((product, index) => {
       const normalizedBrand = normalizeCategoryKey(product.brand);
@@ -783,11 +762,9 @@ document.addEventListener("DOMContentLoaded", () => {
     state.selectedBrand = "all";
     state.searchQuery = "";
     state.onlySale = false;
-    state.sortBy = "featured";
     if (searchInput) searchInput.value = "";
     if (searchInputMobile) searchInputMobile.value = "";
     brandSelect.value = "all";
-    sortSelect.value = "featured";
     saleOnlyCheckbox.checked = false;
     updateCategoryControls("all");
     showMobileCategoryHome();
@@ -1435,12 +1412,6 @@ ${itemsText}
     applyFilters();
   });
 
-  sortSelect.addEventListener("change", (e) => {
-    state.sortBy = e.target.value;
-    animateNextCatalogRender = true;
-    applyFilters();
-  });
-
   saleOnlyCheckbox.addEventListener("change", (e) => {
     state.onlySale = e.target.checked;
     animateNextCatalogRender = true;
@@ -1482,13 +1453,11 @@ ${itemsText}
     if (categorySelectMobile) categorySelectMobile.value = "all";
     state.selectedBrand = "all";
     state.searchQuery = "";
-    state.sortBy = "featured";
     state.onlySale = false;
 
     if (searchInput) searchInput.value = "";
     if (searchInputMobile) searchInputMobile.value = "";
     brandSelect.value = "all";
-    sortSelect.value = "featured";
     saleOnlyCheckbox.checked = false;
     if (mobileFilterToggle) mobileFilterToggle.setAttribute("aria-expanded", "false");
     catalogControls?.classList.remove("filters-open");
