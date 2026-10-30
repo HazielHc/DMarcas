@@ -369,7 +369,17 @@ app.post("/api/admin/ai/product-suggestions", sameOrigin, ownerOnly, productSugg
     const result = await upstream.json().catch(() => ({}));
     if (!upstream.ok) {
       if (upstream.status === 429) return res.status(429).json({ error: "Gemini alcanzó su límite gratuito temporal. Espera unos minutos e inténtalo de nuevo." });
-      if (upstream.status === 401 || upstream.status === 403) return res.status(502).json({ error: "Gemini rechazó la clave o el acceso al modelo. Revisa la configuración de GEMINI_API_KEY en el servidor." });
+      if (upstream.status === 401 || upstream.status === 403) {
+        const upstreamMessage = String(result?.error?.message || "sin detalle")
+          .replaceAll(GEMINI_API_KEY, "[CLAVE OCULTA]")
+          .replace(/(?:AIza|AQ)[A-Za-z0-9_-]{20,}/g, "[CLAVE OCULTA]");
+        console.error("Gemini rechazó la solicitud:", JSON.stringify({
+          httpStatus: upstream.status,
+          status: result?.error?.status || "desconocido",
+          message: upstreamMessage.slice(0, 500)
+        }));
+        return res.status(502).json({ error: "Gemini rechazó la clave o el acceso al modelo. Revisa los registros del servidor para ver el motivo." });
+      }
       console.error("Gemini no pudo sugerir datos:", upstream.status, result?.error?.message || "sin detalle");
       return res.status(502).json({ error: "No se pudo analizar la foto con Gemini. Inténtalo de nuevo o completa los datos manualmente." });
     }
