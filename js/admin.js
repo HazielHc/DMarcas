@@ -8,7 +8,7 @@ adminOverlay.innerHTML = `
   <section class="admin-panel" role="dialog" aria-modal="true" aria-labelledby="adminTitle" tabindex="-1">
     <header class="admin-header">
       <a class="admin-brand" href="#" aria-label="Diversas Marcas, administración"><img src="/assets/logo.png" alt="" /><span>Diversas Marcas</span></a>
-      <nav class="admin-nav" aria-label="Navegación de administración"><a href="#adminWorkspace" id="adminProductsLink">Productos</a><button class="admin-nav-add" type="button" id="adminNavAdd">Agregar producto</button></nav>
+      <nav class="admin-nav" aria-label="Navegación de administración"><a href="#adminWorkspace" id="adminProductsLink">Productos</a><a href="#adminCategoryCovers" id="adminCategoryCoversLink">Portadas</a><button class="admin-nav-add" type="button" id="adminNavAdd">Agregar producto</button></nav>
       <div class="admin-header-actions">
         <button class="admin-button admin-button-quiet" type="button" id="adminLogout" hidden>Cerrar sesión</button>
         <button class="admin-close" type="button" id="adminClose" aria-label="Cerrar administración">×</button>
@@ -41,6 +41,10 @@ adminOverlay.innerHTML = `
         <label class="sr-only" for="adminSearch">Buscar productos para administrar</label>
         <input id="adminSearch" class="admin-input admin-search" type="search" placeholder="Buscar productos" />
         <div class="admin-product-list" id="adminProductList" data-reveal="media"></div>
+      </section>
+      <section class="admin-category-covers" id="adminCategoryCovers" aria-labelledby="adminCategoryCoversTitle" data-reveal="slide">
+        <div class="admin-category-covers-heading"><div><p class="admin-eyebrow">Imágenes del catálogo</p><h2 id="adminCategoryCoversTitle">Portadas por sección</h2><p>Elige qué foto aparece en cada tarjeta de la primera pantalla. Si no agregas una, se usa la primera foto disponible de esa sección.</p></div></div>
+        <div class="admin-category-cover-list" id="adminCategoryCoverList"></div>
       </section>
       <section class="admin-image-guide" id="adminImageGuide" aria-labelledby="adminImageTitle" data-reveal="slide">
         <div class="admin-guide-heading"><p class="admin-eyebrow">Imágenes del producto</p><h2 id="adminImageTitle">Fotografías<br />en cuatro pasos</h2><p>Las rutas de imagen se guardan junto con los datos del producto.</p></div>
@@ -141,8 +145,14 @@ const imagePreview = $("#adminImagePreview");
 const imageFiles = $("#adminImageFiles");
 const imageStatus = $("#adminImageStatus");
 const categoryFields = $("#adminCategoryFields");
+const categoryCoverList = $("#adminCategoryCoverList");
 let productCache = [];
 let categoryCache = ["Perfumes", "Calzado", "Lentes", "Ropa", "Accesorios", "Otros"];
+let categoryCoversCache = {};
+const categoryCoverFiles = new Map();
+const categoryCoverMessages = new Map();
+const categoryCoverObjectUrls = new Map();
+const categoryCoverBusy = new Set();
 let fragranceFamilyCache = [];
 let pendingDeleteId = null;
 let imageEntries = [];
@@ -248,8 +258,10 @@ const showWorkspace = async () => {
 const refreshProducts = async () => {
   productCache = await adminFetch("/api/products");
   try { categoryCache = await adminFetch("/api/admin/categories"); } catch { /* La sesión expirada se informa al guardar. */ }
+  try { categoryCoversCache = await adminFetch("/api/category-covers"); } catch { categoryCoversCache = {}; }
   try { fragranceFamilyCache = await adminFetch("/api/admin/fragrance-families"); } catch { fragranceFamilyCache = [...perfumeFamilies]; }
   syncProductCategoryOptions();
+  renderCategoryCoverSettings();
   renderProducts($("#adminSearch").value);
 };
 
@@ -383,6 +395,59 @@ const categoryIcon = (category) => {
   if (key.includes("ropa") || key.includes("prenda")) return "fa-shirt";
   if (key.includes("accesorio")) return "fa-bag-shopping";
   return "fa-box-open";
+};
+
+const getCategoryCoverSections = () => {
+  const sections = [...categoryCache];
+  for (const product of productCache) {
+    const category = normalizeCategoryText(product.category);
+    const type = normalizeCategoryText(product.details?.type);
+    if (category !== "accesorios") continue;
+    if (/^lentes?$/.test(type)) sections.push("Lentes");
+    if (/^pulseras?$/.test(type)) sections.push("Pulseras");
+  }
+  const seen = new Set();
+  return sections.filter((section) => {
+    const key = normalizeCategoryText(section);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+const renderCategoryCoverSettings = () => {
+  if (!categoryCoverList) return;
+  categoryCoverObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+  categoryCoverObjectUrls.clear();
+  categoryCoverList.innerHTML = getCategoryCoverSections().map((category) => {
+    const key = normalizeCategoryText(category);
+    const savedCover = categoryCoversCache[key] || "";
+    const selectedFile = categoryCoverFiles.get(key);
+    const isBusy = categoryCoverBusy.has(key);
+    const previewUrl = selectedFile ? URL.createObjectURL(selectedFile) : savedCover;
+    if (selectedFile) categoryCoverObjectUrls.set(key, previewUrl);
+    const status = categoryCoverMessages.get(key) || { text: "", isError: false };
+    const imageMarkup = previewUrl
+      ? `<img src="${escapeHtml(previewUrl)}" alt="Portada para ${escapeHtml(category)}" loading="lazy" />`
+      : `<div class="admin-category-cover-placeholder"><i class="fa-solid ${categoryIcon(category)}" aria-hidden="true"></i><span>Se mostrará la foto de un producto</span></div>`;
+    return `
+      <article class="admin-category-cover-card" data-category-cover-card="${escapeHtml(key)}">
+        <div class="admin-category-cover-preview">${imageMarkup}</div>
+        <div class="admin-category-cover-content">
+          <h3>${escapeHtml(category)}</h3>
+          <p>Imagen que verá el cliente en la tarjeta de esta sección.</p>
+          <label class="admin-category-cover-file">
+            <span>Elegir imagen</span>
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-category-cover-file="${escapeHtml(key)}" aria-label="Elegir imagen de portada para ${escapeHtml(category)}" />
+          </label>
+          <div class="admin-category-cover-actions">
+            <button class="admin-button admin-button-primary" type="button" data-save-category-cover="${escapeHtml(key)}" ${(selectedFile && !isBusy) ? "" : "disabled"}>${isBusy ? "Guardando…" : "Guardar portada"}</button>
+            <button class="admin-button admin-button-quiet" type="button" data-clear-category-cover="${escapeHtml(key)}" ${savedCover ? "" : "hidden"} ${isBusy ? "disabled" : ""}>Usar foto de producto</button>
+          </div>
+          <p class="admin-category-cover-status${status.isError ? " is-error" : ""}" data-category-cover-status="${escapeHtml(key)}" role="status" aria-live="polite">${escapeHtml(status.text)}</p>
+        </div>
+      </article>`;
+  }).join("");
 };
 
 const syncProductCategoryOptions = () => {
@@ -678,6 +743,82 @@ const uploadImage = async (file) => adminFetch("/api/admin/uploads/product-image
   headers: { "Content-Type": file.type }
 });
 
+const cleanupUnusedCover = async (image, currentKey) => {
+  if (!image?.startsWith("/uploads/")) return;
+  const usedByProduct = productCache.some((product) => product.images?.includes(image));
+  const usedByAnotherCover = Object.entries(categoryCoversCache).some(([key, value]) => key !== currentKey && value === image);
+  if (!usedByProduct && !usedByAnotherCover) {
+    await adminFetch(`/api/admin/uploads/product-image?path=${encodeURIComponent(image)}`, { method: "DELETE" }).catch(() => {});
+  }
+};
+
+categoryCoverList.addEventListener("change", (event) => {
+  const input = event.target.closest("input[data-category-cover-file]");
+  if (!input) return;
+  const key = input.dataset.categoryCoverFile;
+  const file = input.files?.[0];
+  if (!file) return;
+  const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+  if (!allowedTypes.has(file.type) || file.size > 8 * 1024 * 1024) {
+    categoryCoverFiles.delete(key);
+    categoryCoverMessages.set(key, {
+      text: file.size > 8 * 1024 * 1024 ? "La imagen debe pesar 8 MB o menos." : "Usa una imagen JPG, PNG, WebP o GIF.",
+      isError: true
+    });
+  } else {
+    categoryCoverFiles.set(key, file);
+    categoryCoverMessages.set(key, { text: "Vista previa lista. Guarda para aplicar la portada.", isError: false });
+  }
+  renderCategoryCoverSettings();
+});
+
+categoryCoverList.addEventListener("click", async (event) => {
+  const saveButton = event.target.closest("button[data-save-category-cover]");
+  const clearButton = event.target.closest("button[data-clear-category-cover]");
+  const button = saveButton || clearButton;
+  if (!button) return;
+  const key = button.dataset.saveCategoryCover || button.dataset.clearCategoryCover;
+  if (categoryCoverBusy.has(key)) return;
+  const category = getCategoryCoverSections().find((section) => normalizeCategoryText(section) === key);
+  if (!category) return;
+  const selectedFile = categoryCoverFiles.get(key);
+  const oldCover = categoryCoversCache[key] || "";
+  let uploadedPath = "";
+  categoryCoverBusy.add(key);
+  button.disabled = true;
+  categoryCoverMessages.set(key, { text: saveButton ? "Subiendo y guardando la portada…" : "Quitando la portada…", isError: false });
+  renderCategoryCoverSettings();
+  try {
+    let image = "";
+    if (saveButton) {
+      if (!selectedFile) throw new Error("Selecciona una imagen antes de guardarla.");
+      const uploaded = await uploadImage(selectedFile);
+      uploadedPath = uploaded.path;
+      image = uploaded.path;
+    }
+    const result = await adminFetch("/api/admin/category-covers", {
+      method: "POST",
+      body: JSON.stringify({ category, image })
+    });
+    categoryCoversCache = result.covers || {};
+    categoryCoverFiles.delete(key);
+    categoryCoverMessages.set(key, {
+      text: saveButton ? "Portada guardada y publicada." : "Se usará automáticamente la foto de un producto.",
+      isError: false
+    });
+    await cleanupUnusedCover(oldCover, key);
+    window.dispatchEvent(new CustomEvent("catalog:updated"));
+    showMessage(saveButton ? `Portada de ${category} actualizada.` : `Portada de ${category} restablecida.`);
+  } catch (error) {
+    if (uploadedPath) await adminFetch(`/api/admin/uploads/product-image?path=${encodeURIComponent(uploadedPath)}`, { method: "DELETE" }).catch(() => {});
+    categoryCoverMessages.set(key, { text: error.message, isError: true });
+    showMessage(error.message, true);
+  } finally {
+    categoryCoverBusy.delete(key);
+    renderCategoryCoverSettings();
+  }
+});
+
 const formProduct = () => {
   const fields = productForm.elements;
   const categoryDetails = JSON.parse(fields.categoryDetails.value || "{}");
@@ -750,6 +891,7 @@ $("#adminNewCategoryForm").addEventListener("submit", async (event) => {
     const result = await adminFetch("/api/admin/categories", { method: "POST", body: JSON.stringify({ name: $("#adminNewCategoryName").value }) });
     categoryCache = result.categories;
     syncProductCategoryOptions();
+    renderCategoryCoverSettings();
     await transitionToProductForm(result.category);
   } catch (error) {
     showMessage(error.message, true);
@@ -758,6 +900,10 @@ $("#adminNewCategoryForm").addEventListener("submit", async (event) => {
   }
 });
 $("#adminProductsLink").addEventListener("click", () => { $("#adminWorkspace").scrollIntoView({ behavior: "smooth" }); });
+$("#adminCategoryCoversLink").addEventListener("click", (event) => {
+  event.preventDefault();
+  $("#adminCategoryCovers").scrollIntoView({ behavior: "smooth", block: "start" });
+});
 productForm.elements.category.addEventListener("change", () => {
   if (activeCategory) categoryDrafts[activeCategory] = JSON.parse(productForm.elements.categoryDetails.value || "{}");
   activeCategory = productForm.elements.category.value;

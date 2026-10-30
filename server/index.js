@@ -15,6 +15,7 @@ const SESSION_SECRET = process.env.SESSION_SECRET || "";
 const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(ROOT, "data"));
 const PRODUCTS_FILE = path.join(DATA_DIR, "products.json");
 const CATEGORIES_FILE = path.join(DATA_DIR, "categories.json");
+const CATEGORY_COVERS_FILE = path.join(DATA_DIR, "category-covers.json");
 const FRAGRANCE_FAMILIES_FILE = path.join(DATA_DIR, "fragrance-families.json");
 const PRODUCT_IMAGES_DIR = path.join(DATA_DIR, "product-images");
 const SESSION_COOKIE = "__Host-dm-admin";
@@ -34,6 +35,7 @@ let products = [];
 const DEFAULT_CATEGORIES = ["Perfumes", "Calzado", "Lentes", "Ropa", "Accesorios", "Otros"];
 const DEFAULT_FRAGRANCE_FAMILIES = ["Cítrica", "Floral", "Amaderada", "Aromática", "Acuática", "Oriental / ambarada", "Gourmand", "Chipre"];
 let categories = [...DEFAULT_CATEGORIES];
+let categoryCovers = {};
 let fragranceFamilies = [...DEFAULT_FRAGRANCE_FAMILIES];
 let writeQueue = Promise.resolve();
 
@@ -213,6 +215,21 @@ function categoryKey(value) {
   return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-MX").trim();
 }
 
+function isCategoryCoverPath(value) {
+  return typeof value === "string" && (
+    /^\/uploads\/[\da-f-]{36}\.(jpg|png|webp|gif)$/i.test(value)
+    || (/^\/assets\/[a-z\d/_-]+\.(jpg|jpeg|png|webp|gif|svg)$/i.test(value) && !value.includes(".."))
+  );
+}
+
+function normalizeCategoryCovers(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value).flatMap(([category, image]) => {
+    const key = categoryKey(category);
+    return key && isCategoryCoverPath(image) ? [[key, image]] : [];
+  }));
+}
+
 function mergeCategories(values) {
   const seen = new Set();
   return values.map((value) => cleanText(value, "La sección", 50, true)).filter((value) => {
@@ -227,6 +244,15 @@ async function persistCategories(nextCategories) {
   const temporaryFile = `${CATEGORIES_FILE}.tmp`;
   await writeFile(temporaryFile, `${JSON.stringify(nextCategories, null, 2)}\n`, "utf8");
   await rename(temporaryFile, CATEGORIES_FILE);
+}
+
+async function persistCategoryCovers(nextCovers) {
+  writeQueue = writeQueue.then(async () => {
+    const temporaryFile = `${CATEGORY_COVERS_FILE}.tmp`;
+    await writeFile(temporaryFile, `${JSON.stringify(nextCovers, null, 2)}\n`, "utf8");
+    await rename(temporaryFile, CATEGORY_COVERS_FILE);
+  });
+  await writeQueue;
 }
 
 function mergeFragranceFamilies(values) {
@@ -251,6 +277,24 @@ function handleValidationError(error, res) {
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 app.get("/api/products", (_req, res) => res.set("Cache-Control", "no-store").json(products));
+app.get("/api/category-covers", (_req, res) => res.set("Cache-Control", "no-store").json(categoryCovers));
+
+app.post("/api/admin/category-covers", sameOrigin, ownerOnly, async (req, res) => {
+  try {
+    const category = cleanText(req.body?.category, "La sección", 50, true);
+    const image = cleanText(req.body?.image, "La imagen", 2048);
+    const key = categoryKey(category);
+    if (image && !isCategoryCoverPath(image)) throw new Error("Elige una imagen subida al catálogo o una imagen local válida.");
+    const nextCovers = { ...categoryCovers };
+    if (image) nextCovers[key] = image;
+    else delete nextCovers[key];
+    await persistCategoryCovers(nextCovers);
+    categoryCovers = nextCovers;
+    res.set("Cache-Control", "no-store").json({ category, image, covers: categoryCovers });
+  } catch (error) {
+    handleValidationError(error, res);
+  }
+});
 
 app.get("/api/admin/categories", ownerOnly, (_req, res) => {
   const merged = mergeCategories([...categories, ...products.map((product) => product.category)]);
@@ -452,6 +496,12 @@ try {
   fragranceFamilies = mergeFragranceFamilies([...DEFAULT_FRAGRANCE_FAMILIES, ...products.map((product) => product.details?.fragranceFamily).filter(Boolean)]);
 }
 await persistFragranceFamilies(fragranceFamilies);
+try {
+  categoryCovers = normalizeCategoryCovers(JSON.parse(await readFile(CATEGORY_COVERS_FILE, "utf8")));
+} catch (error) {
+  if (error.code !== "ENOENT") console.error("No se pudieron leer las portadas del catálogo; se usarán las imágenes de producto.", error.message);
+  categoryCovers = {};
+}
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`API y servidor listos en el puerto ${PORT}.`);

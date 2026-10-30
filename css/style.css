@@ -941,6 +941,44 @@ input[type="checkbox"] { border-radius: var(--ui-radius-pill); }
 @keyframes admin-hero-card { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .admin-login-copy,.admin-login-card { animation: none !important; } *,*::before,*::after { scroll-behavior: auto !important; } }
 
+.admin-category-covers { padding: 0 0 56px; scroll-margin-top: 84px; }
+.admin-category-covers-heading { margin-bottom: 22px; }
+.admin-category-covers-heading h2 { margin: 0 0 10px; color: var(--admin-ink); font-size: clamp(28px,3vw,38px); font-weight: 650; letter-spacing: -.04em; line-height: 1.12; }
+.admin-category-covers-heading p:last-child { max-width: 68ch; margin: 0; color: var(--admin-muted); line-height: 1.6; }
+.admin-category-cover-list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+.admin-category-cover-card { display: grid; grid-template-columns: minmax(112px,.72fr) minmax(0,1fr); gap: 16px; min-width: 0; padding: 14px; border: 1px solid var(--admin-line); border-radius: 14px; background: #fff; }
+.admin-category-cover-preview { display: grid; min-width: 0; min-height: 124px; overflow: hidden; place-items: center; align-self: start; aspect-ratio: 4 / 3; border: 1px solid var(--admin-line); border-radius: 10px; background: #f6f3ed; }
+.admin-category-cover-preview img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.admin-category-cover-placeholder { display: grid; align-content: center; justify-items: center; gap: 8px; padding: 10px; color: var(--admin-muted); font-size: 12px; text-align: center; }
+.admin-category-cover-placeholder i { color: #73531a; font-size: 22px; }
+.admin-category-cover-content { display: grid; align-content: start; gap: 8px; min-width: 0; }
+.admin-category-cover-content h3 { margin: 0; font-size: 17px; line-height: 1.25; overflow-wrap: anywhere; }
+.admin-category-cover-content > p:not(.admin-category-cover-status) { margin: 0; color: var(--admin-muted); font-size: 13px; line-height: 1.45; }
+.admin-category-cover-file { position: relative; display: inline-flex; width: fit-content; min-height: 44px; align-items: center; padding: 0 12px; border: 1px solid var(--admin-line-strong); border-radius: 8px; background: #fff; color: var(--admin-ink); font-size: 13px; font-weight: 650; cursor: pointer; }
+.admin-category-cover-file:hover { border-color: var(--admin-ink); background: #f7f7f6; }
+.admin-category-cover-file:focus-within { outline: 3px solid var(--admin-ink); outline-offset: 2px; }
+.admin-category-cover-file input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.admin-category-cover-actions { display: grid; gap: 8px; }
+.admin-category-cover-actions .admin-button { min-height: 44px; justify-content: center; padding: 0 12px; font-size: 13px; }
+.admin-category-cover-actions .admin-button[hidden] { display: none; }
+.admin-category-cover-actions .admin-button:disabled { opacity: .5; cursor: not-allowed; }
+.admin-category-cover-status { min-height: 0; margin: 0; color: #245b3d; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.admin-category-cover-status:empty { display: none; }
+.admin-category-cover-status.is-error { color: #761d1d; }
+@media (max-width: 900px) { .admin-category-cover-list { grid-template-columns: 1fr; } }
+@media (max-width: 620px) {
+  .admin-category-covers { padding-bottom: 40px; }
+  .admin-category-covers-heading h2 { font-size: 30px; }
+  .admin-category-cover-card { grid-template-columns: minmax(88px,.55fr) minmax(0,1fr); gap: 12px; padding: 10px; }
+  .admin-category-cover-preview { min-height: 104px; }
+  .admin-category-cover-content h3 { font-size: 16px; }
+  .admin-category-cover-content > p:not(.admin-category-cover-status) { font-size: 12px; }
+  .admin-category-cover-file { width: 100%; justify-content: center; }
+  .admin-category-cover-actions { grid-template-columns: 1fr; }
+  .admin-category-cover-actions .admin-button { min-width: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .admin-category-cover-file { transition-duration: 1ms; } }
+
 /* Tarjetas compactas del catálogo administrativo */
 .admin-product-list {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 400px));
@@ -2156,11 +2194,6 @@ input[type="checkbox"] { border-radius: var(--ui-radius-pill); }
     color: #4d4d4d;
     font-size: 15px;
     line-height: 1.5;
-  }
-  #catalogoSection .mobile-audience-card:nth-child(3) {
-    grid-column: 1 / -1;
-    width: calc(50% - 6px);
-    justify-self: center;
   }
   #catalogoSection .mobile-audience-card:active { transform: scale(.985); }
 
