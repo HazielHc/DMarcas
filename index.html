@@ -247,17 +247,10 @@
             </select>
           </div>
 
-          <!-- Selector de orden -->
-          <div class="catalog-select-control catalog-sort-select flex items-center gap-1.5">
-            <label for="sortSelect" class="text-xs font-display font-bold text-neutral-700">Ordenar:</label>
+          <!-- Orden fijo del catálogo -->
+          <div class="catalog-select-control catalog-sort-select flex items-center gap-1.5" aria-label="Orden alfabético por marca y producto">
             <i class="fa-solid fa-arrow-down-wide-short catalog-filter-icon" aria-hidden="true"></i>
-            <select id="sortSelect" class="min-h-[44px] border border-neutral-300 rounded px-2.5 py-2 text-sm font-semibold bg-white text-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-950">
-              <option value="featured">Destacados</option>
-              <option value="price-asc">Precio: Menor a Mayor</option>
-              <option value="price-desc">Precio: Mayor a Menor</option>
-              <option value="discount">Mayor Descuento</option>
-              <option value="newest">Nuevos Ingresos</option>
-            </select>
+            <span class="text-xs font-display font-bold text-neutral-700">Marcas y productos A–Z</span>
           </div>
 
           <!-- Solo ofertas -->
