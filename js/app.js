@@ -220,6 +220,7 @@ document.addEventListener("DOMContentLoaded", () => {
     mobileCategoryGroupId: null,
     mobileCategoryStep: "categories",
     mobilePerfumeAudience: "",
+    categoryCovers: {},
     selectedBrand: "all",
     searchQuery: "",
     onlySale: false,
@@ -447,7 +448,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const representative = group.products.find((product) => product.featured && product.images?.length)
         || group.products.find((product) => product.images?.length)
         || group.products[0];
-      const rawImage = representative.images?.[0] || "/assets/logo.png";
+      const coverKey = normalizeCategoryKey(group.label);
+      const rawImage = state.categoryCovers[coverKey] || representative.images?.[0] || "/assets/logo.png";
       const image = representative.id === "sauvage-extrain-ef27ec" && rawImage.startsWith("https://www.bing.com/images/search")
         ? "/assets/products/sauvage-extrain.jpg"
         : rawImage;
@@ -466,19 +468,22 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!mobileCategoryGrid) return;
     const audiences = [
       { value: "Hombre", label: "Hombre" },
-      { value: "Mujer", label: "Mujer" },
-      { value: "Unisex", label: "Unisex" }
+      { value: "Mujer", label: "Mujer" }
     ];
     const perfumes = state.products.filter((product) => normalizeCategoryKey(product.category) === "perfumes");
     if (mobileCategoryHeading) mobileCategoryHeading.textContent = "Perfumes";
     if (mobileCategoryDescription) {
-      mobileCategoryDescription.textContent = "Elige una sección para encontrar tu próxima fragancia.";
+      mobileCategoryDescription.textContent = "Elige para quién buscas una fragancia.";
       mobileCategoryDescription.hidden = false;
     }
     if (mobileCategoryHomeBackWrap) mobileCategoryHomeBackWrap.hidden = false;
 
     mobileCategoryGrid.innerHTML = audiences.map((audience) => {
-      const match = perfumes.filter((product) => normalizeCategoryKey(product.gender) === normalizeCategoryKey(audience.value));
+      const audienceKey = normalizeCategoryKey(audience.value);
+      const match = perfumes.filter((product) => {
+        const gender = normalizeCategoryKey(product.gender);
+        return gender === audienceKey || gender === "unisex";
+      });
       const representative = match.find((product) => product.featured && product.images?.length)
         || match.find((product) => product.images?.length)
         || perfumes.find((product) => product.images?.length);
@@ -518,7 +523,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const selectedAudience = normalizeCategoryKey(state.mobilePerfumeAudience);
       result = result.filter((product) =>
         normalizeCategoryKey(product.category) === "perfumes"
-        && normalizeCategoryKey(product.gender) === selectedAudience
+        && [selectedAudience, "unisex"].includes(normalizeCategoryKey(product.gender))
       );
     }
 
@@ -1655,14 +1660,17 @@ ${itemsText}
   }
 
   const loadCatalog = async () => {
-    try {
-      const response = await fetch("/api/products", { cache: "no-store" });
-      if (response.ok) {
-        const catalog = await response.json();
-        if (Array.isArray(catalog)) state.products = catalog;
-      }
-    } catch {
-      // El catálogo local de respaldo permite abrir la versión estática.
+    const [productsResult, coversResult] = await Promise.allSettled([
+      fetch("/api/products", { cache: "no-store" }),
+      fetch("/api/category-covers", { cache: "no-store" })
+    ]);
+    if (productsResult.status === "fulfilled" && productsResult.value.ok) {
+      const catalog = await productsResult.value.json().catch(() => null);
+      if (Array.isArray(catalog)) state.products = catalog;
+    }
+    if (coversResult.status === "fulfilled" && coversResult.value.ok) {
+      const covers = await coversResult.value.json().catch(() => null);
+      if (covers && typeof covers === "object" && !Array.isArray(covers)) state.categoryCovers = covers;
     }
     renderDesktopCategoryTabs();
     renderMobileCategoryCards();
