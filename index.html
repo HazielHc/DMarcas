@@ -30,6 +30,7 @@
 
   <!-- ================= HEADER PRINCIPAL ================= -->
   <header id="storeHeader" class="store-header bg-white sticky top-0 z-40 border-b border-neutral-200 shadow-sm">
+    <div class="mobile-brand-strip" aria-hidden="true">Diversas Marcas</div>
     <div id="headerInner" class="header-inner max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       
       <!-- Fila Superior: Marca, Buscador y Acciones -->
@@ -49,6 +50,10 @@
             </span>
           </div>
         </a>
+
+        <button class="compact-search-toggle mobile-search-toggle" type="button" aria-label="Abrir búsqueda" aria-controls="mobileSearchOverlay" aria-expanded="false">
+          <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+        </button>
 
         <!-- Buscador de escritorio -->
         <div id="desktopSearchWrap" class="header-search-desktop hidden md:flex flex-1 max-w-lg mx-6">
@@ -70,9 +75,6 @@
 
         <!-- Acceso a la bolsa -->
         <div id="headerActions" class="header-actions flex items-center gap-3 shrink-0">
-          <button class="compact-search-toggle mobile-search-toggle" type="button" aria-label="Abrir búsqueda" aria-controls="mobileSearchOverlay" aria-expanded="false">
-            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-          </button>
           <button class="min-h-[44px] min-w-[44px] flex items-center gap-2 px-3.5 py-2 rounded-md border border-neutral-300 bg-white hover:border-neutral-950 text-neutral-900 text-xs font-display font-bold uppercase tracking-wider transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950" id="openCartBtn" title="Ver mi bolsa de pedido" aria-haspopup="dialog" aria-controls="cartDrawerOverlay" aria-expanded="false">
             <i class="fa-solid fa-bag-shopping text-sm text-neutral-700"></i>
             <span class="hidden sm:inline">Bolsa</span>

@@ -2253,3 +2253,64 @@ input[type="checkbox"] { border-radius: var(--ui-radius-pill); }
     object-fit: cover;
   }
 }
+
+/* Cabecera móvil de tienda: marca arriba y controles equilibrados a los lados del logo. */
+.mobile-brand-strip { display: none; }
+@media (max-width: 767px) {
+  #storeHeader .mobile-brand-strip {
+    display: flex;
+    min-height: 36px;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    border-bottom: 1px solid rgb(197 160 89 / .55);
+    background: #111214;
+    color: #faf7f2;
+    font: 700 13px/1.2 Inter, system-ui, sans-serif;
+    letter-spacing: .12em;
+    text-align: center;
+  }
+  #storeHeader #headerMainRow {
+    display: grid;
+    grid-template-columns: minmax(44px, 1fr) 52px minmax(44px, 1fr);
+    height: 64px;
+    align-items: center;
+    justify-items: center;
+    gap: 8px;
+  }
+  #storeHeader #brandHomeLink {
+    grid-column: 2;
+    grid-row: 1;
+    width: 52px;
+    height: 52px;
+    justify-self: center;
+    justify-content: center;
+    gap: 0;
+  }
+  #storeHeader #brandHomeLink .brand-logo-frame {
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px !important;
+    max-width: 48px !important;
+    min-height: 48px !important;
+    max-height: 48px !important;
+  }
+  #storeHeader #brandHomeLink .brand-copy { display: none; }
+  #storeHeader .mobile-search-toggle {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+    display: inline-flex;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  #storeHeader #headerActions {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+    gap: 0;
+  }
+  #storeHeader.is-compact #headerMainRow { height: 64px; }
+}
