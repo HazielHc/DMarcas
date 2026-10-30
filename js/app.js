@@ -218,6 +218,8 @@ document.addEventListener("DOMContentLoaded", () => {
     filteredProducts: [...INITIAL_PRODUCTS],
     selectedCategory: "all",
     mobileCategoryGroupId: null,
+    mobileCategoryStep: "categories",
+    mobilePerfumeAudience: "",
     selectedBrand: "all",
     searchQuery: "",
     onlySale: false,
@@ -244,6 +246,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const catalogControls = document.querySelector(".catalog-controls");
   const catalogSection = document.getElementById("catalogoSection");
   const mobileCategoryHome = document.getElementById("mobileCategoryHome");
+  const mobileCategoryHomeBackWrap = document.getElementById("mobileCategoryHomeBackWrap");
+  const mobileCategoryHomeBack = document.getElementById("mobileCategoryHomeBack");
+  const mobileCategoryHeading = document.getElementById("mobileCategoryHeading");
+  const mobileCategoryDescription = document.getElementById("mobileCategoryDescription");
   const mobileSearchOverlay = document.getElementById("mobileSearchOverlay");
   const mobileSearchClose = document.getElementById("mobileSearchClose");
   const mobileSearchClear = document.getElementById("mobileSearchClear");
@@ -426,6 +432,17 @@ document.addEventListener("DOMContentLoaded", () => {
       showMobileCategoryHome();
     }
 
+    if (state.mobileCategoryStep === "audiences") {
+      renderMobilePerfumeAudienceCards();
+      return;
+    }
+    if (mobileCategoryHeading) mobileCategoryHeading.textContent = "Explora categorías";
+    if (mobileCategoryDescription) {
+      mobileCategoryDescription.hidden = true;
+      mobileCategoryDescription.textContent = "";
+    }
+    if (mobileCategoryHomeBackWrap) mobileCategoryHomeBackWrap.hidden = true;
+
     mobileCategoryGrid.innerHTML = groups.map((group) => {
       const representative = group.products.find((product) => product.featured && product.images?.length)
         || group.products.find((product) => product.images?.length)
@@ -439,6 +456,37 @@ document.addEventListener("DOMContentLoaded", () => {
         <button type="button" class="mobile-category-card mobile-scroll-reveal" data-mobile-category="${escapeHtml(group.id)}" aria-label="Abrir categoría ${escapeHtml(group.label)}">
           <span class="mobile-category-image"><img src="${escapeHtml(image)}" alt="" loading="lazy" /></span>
           <span class="mobile-category-card-label"><span>${escapeHtml(group.label)}</span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></span>
+        </button>
+      `;
+    }).join("");
+    observeMobileScrollReveals(mobileCategoryGrid);
+  };
+
+  const renderMobilePerfumeAudienceCards = () => {
+    if (!mobileCategoryGrid) return;
+    const audiences = [
+      { value: "Hombre", label: "Hombre" },
+      { value: "Mujer", label: "Mujer" },
+      { value: "Unisex", label: "Unisex" }
+    ];
+    const perfumes = state.products.filter((product) => normalizeCategoryKey(product.category) === "perfumes");
+    if (mobileCategoryHeading) mobileCategoryHeading.textContent = "Perfumes";
+    if (mobileCategoryDescription) {
+      mobileCategoryDescription.textContent = "Elige una sección para encontrar tu próxima fragancia.";
+      mobileCategoryDescription.hidden = false;
+    }
+    if (mobileCategoryHomeBackWrap) mobileCategoryHomeBackWrap.hidden = false;
+
+    mobileCategoryGrid.innerHTML = audiences.map((audience) => {
+      const match = perfumes.filter((product) => normalizeCategoryKey(product.gender) === normalizeCategoryKey(audience.value));
+      const representative = match.find((product) => product.featured && product.images?.length)
+        || match.find((product) => product.images?.length)
+        || perfumes.find((product) => product.images?.length);
+      const image = representative?.images?.[0] || "/assets/logo.png";
+      return `
+        <button type="button" class="mobile-category-card mobile-audience-card mobile-scroll-reveal" data-mobile-audience="${escapeHtml(audience.value)}" aria-label="Ver perfumes para ${escapeHtml(audience.label.toLowerCase())}">
+          <span class="mobile-category-image"><img src="${escapeHtml(image)}" alt="" loading="lazy" /></span>
+          <span class="mobile-category-card-label"><span>${escapeHtml(audience.label)}</span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></span>
         </button>
       `;
     }).join("");
@@ -464,6 +512,14 @@ document.addEventListener("DOMContentLoaded", () => {
           return selectedKey === "lentes" && categoryKey === "accesorios" && /lentes?/.test(`${product.details?.type || ""} ${product.name}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-MX"));
         });
       }
+    }
+
+    if (state.mobilePerfumeAudience && window.matchMedia("(max-width: 767px)").matches) {
+      const selectedAudience = normalizeCategoryKey(state.mobilePerfumeAudience);
+      result = result.filter((product) =>
+        normalizeCategoryKey(product.category) === "perfumes"
+        && normalizeCategoryKey(product.gender) === selectedAudience
+      );
     }
 
     // Filtro por marca
@@ -705,6 +761,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const openMobileSearch = () => {
     if (!mobileSearchOverlay) return;
     state.mobileCategoryGroupId = null;
+    state.mobileCategoryStep = "categories";
+    state.mobilePerfumeAudience = "";
     state.selectedCategory = "all";
     state.selectedBrand = "all";
     state.searchQuery = "";
@@ -713,6 +771,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (brandSelect) brandSelect.value = "all";
     if (saleOnlyCheckbox) saleOnlyCheckbox.checked = false;
     updateCategoryControls("all");
+    renderMobileCategoryCards();
     showMobileCategoryHome();
     mobileSearchOverlay.inert = false;
     mobileSearchOverlay.setAttribute("aria-hidden", "false");
@@ -735,6 +794,27 @@ document.addEventListener("DOMContentLoaded", () => {
     const group = mobileCategoryGroups.get(groupId);
     if (!group) return;
 
+    if (normalizeCategoryKey(group.label) === "perfumes") {
+      state.mobileCategoryStep = "audiences";
+      state.mobilePerfumeAudience = "";
+      state.mobileCategoryGroupId = null;
+      state.selectedCategory = "all";
+      state.selectedBrand = "all";
+      state.searchQuery = "";
+      state.onlySale = false;
+      if (searchInput) searchInput.value = "";
+      if (searchInputMobile) searchInputMobile.value = "";
+      brandSelect.value = "all";
+      saleOnlyCheckbox.checked = false;
+      updateCategoryControls("all");
+      closeMobileSearch();
+      showMobileCategoryHome();
+      renderMobilePerfumeAudienceCards();
+      return;
+    }
+
+    state.mobileCategoryStep = "products";
+    state.mobilePerfumeAudience = "";
     state.mobileCategoryGroupId = group.id;
     state.selectedCategory = group.category;
     state.selectedBrand = "all";
@@ -751,13 +831,49 @@ document.addEventListener("DOMContentLoaded", () => {
     applyFilters();
   };
 
+  const openMobilePerfumeAudience = (audience) => {
+    const perfumeGroup = [...mobileCategoryGroups.values()].find((group) => normalizeCategoryKey(group.label) === "perfumes");
+    if (!perfumeGroup) return;
+    state.mobileCategoryStep = "products";
+    state.mobilePerfumeAudience = audience;
+    state.mobileCategoryGroupId = perfumeGroup.id;
+    state.selectedCategory = perfumeGroup.category;
+    state.selectedBrand = "all";
+    state.searchQuery = "";
+    state.onlySale = false;
+    if (searchInput) searchInput.value = "";
+    if (searchInputMobile) searchInputMobile.value = "";
+    brandSelect.value = "all";
+    saleOnlyCheckbox.checked = false;
+    updateCategoryControls(perfumeGroup.category);
+    closeMobileSearch();
+    showMobileProductList(`Perfumes para ${audience.toLocaleLowerCase("es-MX")}`);
+    animateNextCategoryRender = true;
+    applyFilters();
+  };
+
   mobileCategoryGrid?.addEventListener("click", (event) => {
+    const audienceCard = event.target.closest("[data-mobile-audience]");
+    if (audienceCard) {
+      openMobilePerfumeAudience(audienceCard.getAttribute("data-mobile-audience"));
+      return;
+    }
     const card = event.target.closest("[data-mobile-category]");
     if (card) openMobileCategory(card.getAttribute("data-mobile-category"));
   });
 
+  mobileCategoryHomeBack?.addEventListener("click", () => {
+    state.mobileCategoryStep = "categories";
+    state.mobilePerfumeAudience = "";
+    renderMobileCategoryCards();
+    showMobileCategoryHome();
+  });
+
   mobileCategoryBack?.addEventListener("click", () => {
+    const returnToAudiences = Boolean(state.mobilePerfumeAudience);
     state.mobileCategoryGroupId = null;
+    state.mobileCategoryStep = returnToAudiences ? "audiences" : "categories";
+    state.mobilePerfumeAudience = "";
     state.selectedCategory = "all";
     state.selectedBrand = "all";
     state.searchQuery = "";
@@ -767,6 +883,7 @@ document.addEventListener("DOMContentLoaded", () => {
     brandSelect.value = "all";
     saleOnlyCheckbox.checked = false;
     updateCategoryControls("all");
+    renderMobileCategoryCards();
     showMobileCategoryHome();
     closeMobileSearch();
     applyFilters();
@@ -1366,6 +1483,8 @@ ${itemsText}
   const setCategory = (category) => {
     animateNextCategoryRender = state.selectedCategory !== category;
     state.mobileCategoryGroupId = null;
+    state.mobileCategoryStep = "categories";
+    state.mobilePerfumeAudience = "";
     state.selectedCategory = category;
     updateCategoryControls(category);
     applyFilters();
@@ -1449,6 +1568,8 @@ ${itemsText}
   // Función para reiniciar todos los filtros e ir al inicio
   const resetAllFilters = () => {
     state.mobileCategoryGroupId = null;
+    state.mobileCategoryStep = "categories";
+    state.mobilePerfumeAudience = "";
     state.selectedCategory = "all";
     if (categorySelectMobile) categorySelectMobile.value = "all";
     state.selectedBrand = "all";

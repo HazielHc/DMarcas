@@ -205,8 +205,15 @@
   <!-- ================= SECCIÓN DE CATÁLOGO ================= -->
   <main class="flex-1 py-10 md:py-14" id="catalogoSection">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <section class="mobile-category-home" aria-labelledby="mobileCategoryHeading">
+      <section class="mobile-category-home" id="mobileCategoryHome" aria-labelledby="mobileCategoryHeading">
+        <div class="mobile-category-home-back" id="mobileCategoryHomeBackWrap" hidden>
+          <button type="button" class="mobile-category-back" id="mobileCategoryHomeBack" aria-label="Volver a categorías">
+            <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+          </button>
+          <span>Explora categorías</span>
+        </div>
         <h2 id="mobileCategoryHeading" class="mobile-scroll-reveal">Explora categorías</h2>
+        <p class="mobile-category-description" id="mobileCategoryDescription" hidden></p>
         <div class="mobile-category-grid" id="mobileCategoryGrid" aria-live="polite"></div>
       </section>
 

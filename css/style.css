@@ -2141,6 +2141,28 @@ input[type="checkbox"] { border-radius: var(--ui-radius-pill); }
     color: #111214;
   }
   #catalogoSection .mobile-category-card-label i { color: #111214; }
+  #catalogoSection .mobile-category-home-back {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 16px;
+    color: #55504a;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  #catalogoSection .mobile-category-home-back[hidden] { display: none !important; }
+  #catalogoSection .mobile-category-description {
+    margin: -8px 0 18px;
+    color: #4d4d4d;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  #catalogoSection .mobile-audience-card:nth-child(3) {
+    grid-column: 1 / -1;
+    width: calc(50% - 6px);
+    justify-self: center;
+  }
+  #catalogoSection .mobile-audience-card:active { transform: scale(.985); }
 
   #catalogoSection .product-card {
     min-width: 0;
