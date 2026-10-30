@@ -22,6 +22,12 @@ La contraseña se crea en `.env`, que está excluido de Git. Para verla en tu pr
 
 Desde el panel se pueden agregar, editar y eliminar productos, con nombre, marca, categoría, precios, imágenes, público, stock, tallas o presentaciones, colores, descripción, características y distintivos de oferta/novedad/destacado. Las imágenes externas deben usar HTTPS; las del proyecto pueden referenciarse con rutas como `/assets/foto.jpg`.
 
+### Sugerencias de producto con Gemini
+
+En el formulario de producto, selecciona una o más fotos y pulsa **Analizar primera foto** para recibir sugerencias de marca, modelo y datos descriptivos. Gemini solo propone texto: revisa y aplica los campos que coincidan con el producto. El precio, las presentaciones, los colores, la disponibilidad y los distintivos siguen siendo manuales. La foto seleccionada se envía a Google Gemini para analizarla; en el nivel gratuito, Google puede usar los datos enviados para mejorar sus productos.
+
+Para activarlo localmente, crea una clave en [Google AI Studio](https://aistudio.google.com/app/apikey) y añádela a tu `.env` como `GEMINI_API_KEY`. En Render, agrega `GEMINI_API_KEY` en la configuración Environment del servicio web y vuelve a desplegar. La clave se usa únicamente en el servidor y nunca se entrega al navegador. `GEMINI_MODEL` es opcional y por defecto usa `gemini-3.8-flash`; disponibilidad, cuotas y condiciones del nivel gratuito dependen del proyecto de Google.
+
 ## Producción
 
 El panel requiere el servidor Node: un hosting estático que solo publica `dist/` no guarda cambios ni ofrece administración. Configura `ADMIN_PASSWORD`, `SESSION_SECRET`, `NODE_ENV=production` y un `DATA_DIR` persistente en el proveedor de hosting. Usa HTTPS y un disco persistente para `DATA_DIR`, ya que `data/products.json` contiene el catálogo administrado.
