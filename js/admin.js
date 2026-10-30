@@ -81,7 +81,7 @@ adminOverlay.innerHTML = `
               <label class="admin-field">Marca<input class="admin-input" name="brand" required maxlength="100" placeholder="Ej. Dior" /></label>
               <label class="admin-field admin-category-edit-field">Sección<select class="admin-input" name="category" required><option value="">Elige una sección</option><option>Perfumes</option><option>Ropa</option><option>Calzado</option><option>Accesorios</option></select></label>
               <div class="admin-field admin-category-static" hidden><span>Sección</span><span class="admin-category-static-value" id="adminCategoryStaticValue"></span></div>
-              <div class="admin-field admin-field-wide admin-upload-field"><span class="admin-field-label">Fotografías del producto</span><label class="admin-upload-control" for="adminImageFiles"><span class="admin-upload-action">Seleccionar fotos</span><span>o arrástralas aquí</span><input id="adminImageFiles" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple /></label><span class="admin-field-help" id="adminImageHelp">Hasta 12 imágenes JPG, PNG, WebP o GIF; máximo 8 MB cada una. La primera será la portada.</span><p class="admin-image-status" id="adminImageStatus" role="status" aria-live="polite"></p><div class="admin-image-preview" id="adminImagePreview" aria-live="polite"></div></div>
+              <div class="admin-field admin-field-wide admin-upload-field"><span class="admin-field-label">Fotografías del producto</span><label class="admin-upload-control" for="adminImageFiles"><span class="admin-upload-action">Seleccionar fotos</span><span>o arrástralas aquí</span><input id="adminImageFiles" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple /></label><span class="admin-field-help" id="adminImageHelp">Hasta 12 imágenes JPG, PNG, WebP o GIF; máximo 8 MB cada una. La primera será la portada.</span><p class="admin-image-status" id="adminImageStatus" role="status" aria-live="polite"></p><div class="admin-image-preview" id="adminImagePreview" aria-live="polite"></div><div class="admin-ai-assistant"><div><strong>Completa los datos con una foto</strong><p>La foto se enviará a Google Gemini para analizarla. En el nivel gratuito, Google puede usar los datos para mejorar sus productos. Revisa las sugerencias antes de aplicarlas; la IA puede equivocarse.</p></div><button class="admin-button admin-button-quiet" type="button" id="adminSuggestProduct" disabled>Analizar primera foto</button><p class="admin-ai-status" id="adminAiStatus" role="status" aria-live="polite">Selecciona una foto y espera la conexión con el asistente.</p><div class="admin-ai-result" id="adminAiResult" hidden></div></div></div>
             </div>
           </section>
           <section class="admin-form-section" aria-labelledby="adminAttributesTitle">
@@ -140,12 +140,20 @@ const adminNav = $(".admin-nav");
 const imagePreview = $("#adminImagePreview");
 const imageFiles = $("#adminImageFiles");
 const imageStatus = $("#adminImageStatus");
+const aiSuggestButton = $("#adminSuggestProduct");
+const aiStatus = $("#adminAiStatus");
+const aiResult = $("#adminAiResult");
 const categoryFields = $("#adminCategoryFields");
 let productCache = [];
 let categoryCache = ["Perfumes", "Calzado", "Lentes", "Ropa", "Accesorios", "Otros"];
 let fragranceFamilyCache = [];
 let pendingDeleteId = null;
 let imageEntries = [];
+let aiConfigured = false;
+let aiBusy = false;
+let aiRequestSequence = 0;
+let aiConfigCheckSequence = 0;
+let aiRequestController = null;
 let editingId = null;
 let categoryDrafts = {};
 let activeCategory = "";
@@ -320,6 +328,10 @@ const renderProducts = (query = "") => {
 };
 
 const openProductForm = (product = null, selectedCategory = "") => {
+  aiRequestController?.abort();
+  aiRequestController = null;
+  aiRequestSequence += 1;
+  aiBusy = false;
   editingId = product?.id ?? null;
   productForm.reset();
   $("#adminFormTitle").textContent = editingId ? "Editar producto" : "Agregar producto";
@@ -332,6 +344,11 @@ const openProductForm = (product = null, selectedCategory = "") => {
   imageEntries = (product?.images ?? []).map((src) => ({ src: productImagePath(product, src), existing: true }));
   imageFiles.value = "";
   imageStatus.textContent = "";
+  aiResult.hidden = true;
+  aiStatus.textContent = "Selecciona una foto y espera la conexión con el asistente.";
+  aiStatus.classList.remove("is-error");
+  aiConfigured = false;
+  updateAiAvailability();
   fields.name.value = product?.name ?? "";
   fields.brand.value = product?.brand ?? "";
   fields.category.value = product?.category ?? selectedCategory;
@@ -356,7 +373,137 @@ const openProductForm = (product = null, selectedCategory = "") => {
   renderCategoryFields(product?.details ?? {});
   renderImagePreviews();
   productDialog.showModal();
+  checkAiConfiguration(++aiConfigCheckSequence);
   fields.name.focus();
+};
+
+const updateAiAvailability = () => {
+  const hasLocalImage = imageEntries.some((entry) => entry.file);
+  aiSuggestButton.disabled = aiBusy || !aiConfigured || !hasLocalImage;
+  if (!aiBusy && !aiConfigured) aiStatus.textContent = "El asistente requiere configurar Gemini en el servidor.";
+  else if (!aiBusy && !hasLocalImage && aiConfigured) aiStatus.textContent = "Selecciona una foto nueva; se analizará la primera que agregues.";
+};
+
+const resetAiAnalysisForContextChange = () => {
+  const wasBusy = aiBusy;
+  if (aiBusy) {
+    aiRequestSequence += 1;
+    aiRequestController?.abort();
+    aiRequestController = null;
+    aiBusy = false;
+    aiSuggestButton.textContent = "Analizar primera foto";
+  }
+  aiResult.hidden = true;
+  if (aiConfigured) aiStatus.textContent = wasBusy ? "Cambió la foto o sección. Vuelve a analizar el producto." : "La foto o sección cambió. Puedes volver a analizar el producto.";
+  updateAiAvailability();
+};
+
+const checkAiConfiguration = async (checkSequence) => {
+  try {
+    const status = await adminFetch("/api/admin/ai/product-suggestions/status");
+    if (checkSequence !== aiConfigCheckSequence) return;
+    aiConfigured = Boolean(status.configured);
+    if (!aiConfigured) aiStatus.textContent = "Para activar el asistente, falta configurar GEMINI_API_KEY en el servidor.";
+    updateAiAvailability();
+  } catch (error) {
+    if (checkSequence !== aiConfigCheckSequence) return;
+    aiStatus.textContent = error.message;
+    aiStatus.classList.add("is-error");
+  }
+};
+
+const renderAiSuggestion = (suggestion) => {
+  aiResult.replaceChildren();
+  const heading = document.createElement("strong");
+  heading.textContent = `Sugerencia de Gemini · confianza ${suggestion.confidence}`;
+  const summary = document.createElement("p");
+  summary.textContent = [suggestion.brand, suggestion.name].filter(Boolean).join(" · ") || "No se pudo reconocer la marca o el modelo con claridad.";
+  const detail = document.createElement("p");
+  detail.textContent = suggestion.description || "No hay una descripción sugerida.";
+  const facts = document.createElement("p");
+  const attributes = Object.values(suggestion.details || {}).filter(Boolean);
+  facts.textContent = attributes.length ? `Datos identificados: ${attributes.join(" · ")}` : "No se identificaron características adicionales con suficiente seguridad.";
+  const features = document.createElement("p");
+  features.textContent = suggestion.features.length ? `Características: ${suggestion.features.join(" · ")}` : "No se identificaron otras características visibles.";
+  const concerns = document.createElement("p");
+  concerns.textContent = suggestion.uncertainty.length ? `Confirma: ${suggestion.uncertainty.join("; ")}` : "Confirma que los datos coincidan con el producto.";
+  const applyButton = document.createElement("button");
+  applyButton.className = "admin-button admin-button-primary";
+  applyButton.type = "button";
+  applyButton.textContent = "Aplicar sugerencias";
+  applyButton.addEventListener("click", () => applyAiSuggestion(suggestion));
+  aiResult.append(heading, summary, detail, facts, features, concerns, applyButton);
+  aiResult.hidden = false;
+};
+
+const applyAiSuggestion = (suggestion) => {
+  const fields = productForm.elements;
+  if (suggestion.name) fields.name.value = suggestion.name;
+  if (suggestion.brand) fields.brand.value = suggestion.brand;
+  if (suggestion.description) fields.description.value = suggestion.description;
+  if (suggestion.features.length) fields.features.value = suggestion.features.join("\n");
+
+  const currentDetails = JSON.parse(fields.categoryDetails.value || "{}");
+  const suggestedDetails = suggestion.details || {};
+  const nextDetails = {
+    ...currentDetails,
+    type: suggestedDetails.type || currentDetails.type || "",
+    material: suggestedDetails.material || currentDetails.material || "",
+    fragranceFamily: suggestedDetails.fragranceFamily || currentDetails.fragranceFamily || "",
+    concentration: suggestedDetails.concentration || currentDetails.concentration || ""
+  };
+  renderCategoryFields(nextDetails);
+  const concentration = categoryFields.querySelector('[name="concentration"]');
+  if (concentration && nextDetails.concentration) {
+    if (![...concentration.options].some((option) => option.value === nextDetails.concentration)) nextDetails.concentration = "";
+    concentration.value = nextDetails.concentration;
+  }
+  const material = categoryFields.querySelector('[name="material"]');
+  if (material) material.value = nextDetails.material;
+  const productType = categoryFields.querySelector('[name="productType"]');
+  if (productType && nextDetails.type) {
+    productType.value = [...productType.options].some((option) => option.value === nextDetails.type) ? nextDetails.type : "";
+  }
+  categoryFields.querySelectorAll("input,select").forEach((control) => control.dispatchEvent(new Event("change", { bubbles: true })));
+  productFormMessage.hidden = true;
+  fields.name.focus();
+};
+
+const requestAiSuggestion = async () => {
+  const firstLocalImage = imageEntries.find((entry) => entry.file);
+  if (!firstLocalImage || aiBusy) return;
+  const requestSequence = ++aiRequestSequence;
+  const controller = new AbortController();
+  aiRequestController = controller;
+  aiBusy = true;
+  aiResult.hidden = true;
+  aiStatus.classList.remove("is-error");
+  aiStatus.textContent = "Analizando la foto con Gemini…";
+  aiSuggestButton.textContent = "Analizando foto…";
+  updateAiAvailability();
+  try {
+    const category = encodeURIComponent(productForm.elements.category.value);
+    const suggestion = await adminFetch(`/api/admin/ai/product-suggestions?category=${category}`, {
+      method: "POST",
+      body: firstLocalImage.file,
+      signal: controller.signal,
+      headers: { "Content-Type": firstLocalImage.file.type }
+    });
+    if (requestSequence !== aiRequestSequence) return;
+    aiStatus.textContent = "Revisa lo que identificó y aplícalo solo si coincide con tu producto.";
+    renderAiSuggestion(suggestion);
+  } catch (error) {
+    if (requestSequence !== aiRequestSequence) return;
+    aiStatus.textContent = error.message;
+    aiStatus.classList.add("is-error");
+  } finally {
+    if (requestSequence === aiRequestSequence) {
+      aiRequestController = null;
+      aiBusy = false;
+      aiSuggestButton.textContent = "Analizar primera foto";
+      updateAiAvailability();
+    }
+  }
 };
 
 const updateCategorySectionLabel = (category) => {
@@ -764,6 +911,7 @@ productForm.elements.category.addEventListener("change", () => {
   updateCategorySectionLabel(activeCategory);
   renderCategoryFields(categoryDrafts[activeCategory] || {}, true);
   renderPresentationChoices(lines(productForm.elements.sizes.value));
+  resetAiAnalysisForContextChange();
 });
 imageFiles.addEventListener("change", () => {
   const selected = [...imageFiles.files];
@@ -786,6 +934,7 @@ imageFiles.addEventListener("change", () => {
   imageEntries.push(...selected.map((file) => ({ file, objectUrl: URL.createObjectURL(file) })));
   imageFiles.value = "";
   renderImagePreviews(true);
+  resetAiAnalysisForContextChange();
 });
 imagePreview.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-image-action]");
@@ -802,7 +951,9 @@ imagePreview.addEventListener("click", (event) => {
   }
   imageStatus.textContent = `${imageEntries.length} ${imageEntries.length === 1 ? "fotografía" : "fotografías"} en el producto.`;
   renderImagePreviews();
+  resetAiAnalysisForContextChange();
 });
+aiSuggestButton.addEventListener("click", requestAiSuggestion);
 const uploadControl = $(".admin-upload-control");
 uploadControl.addEventListener("dragover", (event) => { event.preventDefault(); uploadControl.classList.add("is-dragging"); });
 uploadControl.addEventListener("dragleave", () => uploadControl.classList.remove("is-dragging"));
@@ -819,10 +970,21 @@ $("#adminClose").addEventListener("click", closeAdmin);
 $("#adminFormClose").addEventListener("click", () => productDialog.close());
 $("#adminCancelForm").addEventListener("click", () => productDialog.close());
 productDialog.addEventListener("close", () => {
+  aiRequestSequence += 1;
+  aiConfigCheckSequence += 1;
+  aiRequestController?.abort();
+  aiRequestController = null;
+  aiBusy = false;
+  aiSuggestButton.textContent = "Analizar primera foto";
   imageEntries.forEach((entry) => { if (entry.objectUrl) URL.revokeObjectURL(entry.objectUrl); });
   imageEntries = [];
   renderImagePreviews();
   imageStatus.textContent = "";
+  aiConfigured = false;
+  aiStatus.textContent = "Selecciona una foto y espera la conexión con el asistente.";
+  aiStatus.classList.remove("is-error");
+  aiResult.hidden = true;
+  updateAiAvailability();
 });
 
 productList.addEventListener("click", async (event) => {
