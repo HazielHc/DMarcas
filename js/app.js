@@ -786,41 +786,43 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let mobileCatalogTransitionVersion = 0;
   let mobileCatalogTransitionAnimations = [];
-  const runMobileCatalogTransition = async (updateView, { direction = "forward" } = {}) => {
-    if (!mobileCatalogTransition || !window.matchMedia("(max-width: 767px)").matches) {
+  const runMobileCatalogTransition = async (updateView) => {
+    if (!mobileCatalogTransition || !catalogSection || !window.matchMedia("(max-width: 767px)").matches) {
       updateView();
       return;
     }
 
     const version = ++mobileCatalogTransitionVersion;
-    const presentationTransform = mobileCatalogTransition.hidden
-      ? null
-      : getComputedStyle(mobileCatalogTransition).transform;
+    const overlayOpacity = mobileCatalogTransition.hidden
+      ? 0
+      : Number.parseFloat(getComputedStyle(mobileCatalogTransition).opacity) || 0;
+    const contentOpacity = Number.parseFloat(getComputedStyle(catalogSection).opacity) || 1;
     mobileCatalogTransitionAnimations.forEach((animation) => animation.cancel());
     mobileCatalogTransitionAnimations = [];
     mobileCatalogTransition.hidden = false;
 
-    const reversed = direction === "back";
-    const startTransform = presentationTransform && presentationTransform !== "none"
-      ? presentationTransform
-      : reversed ? "translate3d(-100%, 0, 0)" : "translate3d(0%, 0, 0)";
-    const centerTransform = "translate3d(-50%, 0, 0)";
-    const endTransform = reversed ? "translate3d(0%, 0, 0)" : "translate3d(-100%, 0, 0)";
     const reducedMotion = reducedMotionQuery.matches;
+    const coveredContentOpacity = reducedMotion ? 0.86 : 0.78;
 
     try {
       const coverAnimation = mobileCatalogTransition.animate(
-        reducedMotion
-          ? [{ opacity: 0, transform: centerTransform }, { opacity: 1, transform: centerTransform }]
-          : [{ transform: startTransform }, { transform: centerTransform }],
+        [{ opacity: overlayOpacity }, { opacity: 1 }],
         {
-          duration: reducedMotion ? 90 : 130,
-          easing: "cubic-bezier(0.77, 0, 0.175, 1)",
+          duration: reducedMotion ? 90 : 120,
+          easing: "cubic-bezier(0.23, 1, 0.32, 1)",
           fill: "forwards"
         }
       );
-      mobileCatalogTransitionAnimations = [coverAnimation];
-      await coverAnimation.finished.catch(() => {});
+      const softenAnimation = catalogSection.animate(
+        [{ opacity: contentOpacity }, { opacity: coveredContentOpacity }],
+        {
+          duration: reducedMotion ? 90 : 120,
+          easing: "cubic-bezier(0.23, 1, 0.32, 1)",
+          fill: "forwards"
+        }
+      );
+      mobileCatalogTransitionAnimations = [coverAnimation, softenAnimation];
+      await Promise.all(mobileCatalogTransitionAnimations.map((animation) => animation.finished.catch(() => {})));
       if (version !== mobileCatalogTransitionVersion) return;
 
       updateView();
@@ -828,23 +830,29 @@ document.addEventListener("DOMContentLoaded", () => {
       if (version !== mobileCatalogTransitionVersion) return;
 
       const revealAnimation = mobileCatalogTransition.animate(
-        reducedMotion
-          ? [{ opacity: 1, transform: centerTransform }, { opacity: 0, transform: centerTransform }]
-          : [{ transform: centerTransform }, { transform: endTransform }],
+        [{ opacity: 1 }, { opacity: 0 }],
         {
           duration: reducedMotion ? 110 : 150,
-          easing: "cubic-bezier(0.77, 0, 0.175, 1)",
+          easing: "cubic-bezier(0.23, 1, 0.32, 1)",
           fill: "forwards"
         }
       );
-      mobileCatalogTransitionAnimations = [revealAnimation];
-      await revealAnimation.finished.catch(() => {});
+      const clarifyAnimation = catalogSection.animate(
+        [{ opacity: coveredContentOpacity }, { opacity: 1 }],
+        {
+          duration: reducedMotion ? 110 : 150,
+          easing: "cubic-bezier(0.23, 1, 0.32, 1)",
+          fill: "forwards"
+        }
+      );
+      mobileCatalogTransitionAnimations = [revealAnimation, clarifyAnimation];
+      await Promise.all(mobileCatalogTransitionAnimations.map((animation) => animation.finished.catch(() => {})));
     } finally {
       if (version === mobileCatalogTransitionVersion) {
         mobileCatalogTransitionAnimations = [];
         mobileCatalogTransition.hidden = true;
-        mobileCatalogTransition.style.removeProperty("transform");
         mobileCatalogTransition.style.removeProperty("opacity");
+        catalogSection.style.removeProperty("opacity");
       }
     }
   };
@@ -871,7 +879,7 @@ document.addEventListener("DOMContentLoaded", () => {
       state.mobilePerfumeAudience = "";
       renderMobileCategoryCards();
       showMobileCategoryHome();
-    }, { direction: "back" });
+    });
   });
 
   mobileCategoryBack?.addEventListener("click", () => {
@@ -894,7 +902,7 @@ document.addEventListener("DOMContentLoaded", () => {
       closeMobileSearch();
       applyFilters();
       mobileCategoryHome?.scrollIntoView({ behavior: prefersReducedMotion ? "instant" : "smooth", block: "start" });
-    }, { direction: "back" });
+    });
   });
 
   // 4. Modal de Detalle Interactivo con animación suave Anime.js
