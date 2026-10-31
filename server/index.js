@@ -20,6 +20,7 @@ const FRAGRANCE_FAMILIES_FILE = path.join(DATA_DIR, "fragrance-families.json");
 const PRODUCT_IMAGES_DIR = path.join(DATA_DIR, "product-images");
 const SESSION_COOKIE = "__Host-dm-admin";
 const SESSION_TTL_SECONDS = 60 * 60 * 12;
+const NEW_BADGE_DURATION_MS = 78 * 60 * 60 * 1000;
 const SESSION_SALT = "diversas-marcas-admin-v1";
 
 if (ADMIN_PASSWORD.length < 12 || SESSION_SECRET.length < 32) {
@@ -140,7 +141,7 @@ function stringList(value, label, maxItems = 20, maxLength = 120) {
   return value.map((item) => cleanText(item, label, maxLength)).filter(Boolean);
 }
 
-function normalizeProduct(input, id) {
+function normalizeProduct(input, id, previousProduct = null) {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("Datos de producto inválidos.");
 
   const name = cleanText(input.name, "El nombre", 160, true);
@@ -175,6 +176,19 @@ function normalizeProduct(input, id) {
 
   const rawDetails = input.details && typeof input.details === "object" && !Array.isArray(input.details) ? input.details : {};
 
+  const now = Date.now();
+  const isNew = Boolean(input.isNew);
+  const previousCreatedAt = Date.parse(previousProduct?.createdAt || "");
+  const previousNewUntil = Date.parse(previousProduct?.newUntil || "");
+  const createdAt = Number.isFinite(previousCreatedAt)
+    ? new Date(previousCreatedAt).toISOString()
+    : new Date(now).toISOString();
+  const newUntil = isNew
+    ? new Date(previousProduct?.isNew && Number.isFinite(previousNewUntil) && previousNewUntil > now
+      ? previousNewUntil
+      : now + NEW_BADGE_DURATION_MS).toISOString()
+    : null;
+
   return {
     id,
     name,
@@ -184,7 +198,9 @@ function normalizeProduct(input, id) {
     regularPrice,
     offerPrice,
     onSale: Boolean(input.onSale),
-    isNew: Boolean(input.isNew),
+    isNew,
+    createdAt,
+    newUntil,
     featured: Boolean(input.featured),
     stockStatus: cleanText(input.stockStatus, "La disponibilidad", 80),
     rating,
@@ -200,6 +216,22 @@ function normalizeProduct(input, id) {
     description: cleanText(input.description, "La descripción", 2000),
     features: stringList(input.features, "Las características", 12, 240)
   };
+}
+
+function addProductTimeMetadata(product, now = Date.now()) {
+  const parsedCreatedAt = Date.parse(product?.createdAt || "");
+  const parsedNewUntil = Date.parse(product?.newUntil || "");
+  const createdAt = Number.isFinite(parsedCreatedAt) ? new Date(parsedCreatedAt).toISOString() : new Date(now).toISOString();
+  const newUntil = product?.isNew
+    ? new Date(Number.isFinite(parsedNewUntil) ? parsedNewUntil : now + NEW_BADGE_DURATION_MS).toISOString()
+    : null;
+  const changed = product?.createdAt !== createdAt || product?.newUntil !== newUntil;
+  return { product: { ...product, createdAt, newUntil }, changed };
+}
+
+function productForClient(product, now = Date.now()) {
+  const expiresAt = Date.parse(product?.newUntil || "");
+  return { ...product, isNew: Boolean(product?.isNew && Number.isFinite(expiresAt) && expiresAt > now) };
 }
 
 async function persistProducts(nextProducts) {
@@ -276,7 +308,10 @@ function handleValidationError(error, res) {
 }
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
-app.get("/api/products", (_req, res) => res.set("Cache-Control", "no-store").json(products));
+app.get("/api/products", (_req, res) => {
+  const now = Date.now();
+  res.set("Cache-Control", "no-store").json(products.map((product) => productForClient(product, now)));
+});
 app.get("/api/category-covers", (_req, res) => res.set("Cache-Control", "no-store").json(categoryCovers));
 
 app.post("/api/admin/category-covers", sameOrigin, ownerOnly, async (req, res) => {
@@ -424,7 +459,7 @@ app.put("/api/admin/products/:id", sameOrigin, ownerOnly, async (req, res) => {
   try {
     const index = products.findIndex((product) => product.id === req.params.id);
     if (index < 0) return res.status(404).json({ error: "No se encontró ese producto." });
-    const updated = normalizeProduct(req.body, products[index].id);
+    const updated = normalizeProduct(req.body, products[index].id, products[index]);
     const nextProducts = products.map((product, currentIndex) => currentIndex === index ? updated : product);
     await persistProducts(nextProducts);
     products = nextProducts;
@@ -484,6 +519,15 @@ try {
   products = SEED_PRODUCTS.map((product) => ({ ...product }));
   await persistProducts(products);
 }
+
+const metadataNow = Date.now();
+let productMetadataChanged = false;
+products = products.map((product) => {
+  const normalized = addProductTimeMetadata(product, metadataNow);
+  productMetadataChanged ||= normalized.changed;
+  return normalized.product;
+});
+if (productMetadataChanged) await persistProducts(products);
 
 categories = mergeCategories([...categories, ...products.map((product) => product.category)]);
 await persistCategories(categories);

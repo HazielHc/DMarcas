@@ -3,7 +3,7 @@
 // Tepic, Nayarit, México
 // ===================================================================
 
-import { animate, stagger } from "animejs";
+import { animate } from "animejs";
 import { CONFIG } from "./config.js";
 import { PRODUCTS as INITIAL_PRODUCTS } from "./products.js";
 
@@ -15,11 +15,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const compactSearchToggles = document.querySelectorAll(".compact-search-toggle");
   const desktopSearchInput = document.getElementById("searchInput");
   const mobileSearchInput = document.getElementById("searchInputMobile");
-  let headerSpacer = null;
-  let headerCompact = false;
-  const headerAnimations = new Set();
-  let headerAnimationFrame = 0;
-  let headerTransitionVersion = 0;
   const categoryNav = document.querySelector('nav[aria-label="Categorías"]');
   let categoryIndicator = categoryNav?.querySelector(".category-active-indicator");
   let categoryIndicatorAnimation = null;
@@ -72,85 +67,8 @@ document.addEventListener("DOMContentLoaded", () => {
     moveCategoryIndicator(false);
   });
 
-  const animateHeaderReflow = (before) => {
-    const version = ++headerTransitionVersion;
-    if (headerAnimationFrame) cancelAnimationFrame(headerAnimationFrame);
-    for (const animation of headerAnimations) animation.cancel();
-    headerAnimations.clear();
-    if (reducedMotionQuery.matches) return;
-    headerAnimationFrame = requestAnimationFrame(() => {
-      headerAnimationFrame = 0;
-      if (version !== headerTransitionVersion || reducedMotionQuery.matches) return;
-      for (const [element, rect] of before) {
-        if (!element.isConnected) continue;
-        const next = element.getBoundingClientRect();
-        if (!next.width || !next.height) continue;
-        const dx = rect.left - next.left;
-        const dy = rect.top - next.top;
-        const isLogo = element.matches(".brand-logo-frame");
-        const scaleX = isLogo && next.width ? rect.width / next.width : 1;
-        const scaleY = isLogo && next.height ? rect.height / next.height : 1;
-        if (Math.abs(dx) < 1 && Math.abs(dy) < 1 && Math.abs(scaleX - 1) < 0.01 && Math.abs(scaleY - 1) < 0.01) continue;
-        const animation = element.animate(
-          [
-            { transform: `translate3d(${dx}px, ${dy}px, 0) scale(${scaleX}, ${scaleY})` },
-            { transform: "translate(0, 0)" }
-          ],
-          { duration: 280, easing: "cubic-bezier(0.23, 1, 0.32, 1)" }
-        );
-        headerAnimations.add(animation);
-        animation.onfinish = () => headerAnimations.delete(animation);
-        animation.oncancel = () => headerAnimations.delete(animation);
-      }
-    });
-  };
-
-  const setHeaderCompact = (compact, animateReflow = true) => {
-    if (!storeHeader || compact === headerCompact) return;
-    const movingParts = [
-      storeHeader.querySelector("#brandHomeLink"),
-      storeHeader.querySelector("#brandHomeLink .brand-logo-frame"),
-      storeHeader.querySelector('nav[aria-label="Categorías"]'),
-      storeHeader.querySelector("#desktopSearchWrap"),
-      storeHeader.querySelector("#headerActions"),
-      storeHeader.querySelector("#categorySelectMobile")
-    ].filter(Boolean);
-    const before = movingParts.map((element) => [element, element.getBoundingClientRect()]);
-
-    const expandedFlowHeight = storeHeader.getBoundingClientRect().height;
-    headerCompact = compact;
-    storeHeader.classList.toggle("is-compact", compact);
-    moveCategoryIndicator(false);
-    if (compact && !headerSpacer) {
-      headerSpacer = document.createElement("div");
-      headerSpacer.setAttribute("aria-hidden", "true");
-      headerSpacer.className = "header-flow-spacer";
-      headerSpacer.style.height = `${expandedFlowHeight}px`;
-      storeHeader.after(headerSpacer);
-    } else if (!compact && headerSpacer) {
-      headerSpacer.remove();
-      headerSpacer = null;
-    }
-
-    if (!compact && storeHeader.classList.contains("is-search-open")) {
-      storeHeader.classList.remove("is-search-open");
-      compactSearchToggles.forEach((button) => button.setAttribute("aria-expanded", "false"));
-    }
-    if (animateReflow) animateHeaderReflow(before);
-  };
-
-  let scrollFrame = 0;
-  const updateHeaderOnScroll = () => {
-    scrollFrame = 0;
-    const y = window.scrollY;
-    if (!headerCompact && y > 64) setHeaderCompact(true);
-    else if (headerCompact && y < 28) setHeaderCompact(false);
-  };
-  window.addEventListener("scroll", () => {
-    if (scrollFrame) return;
-    scrollFrame = requestAnimationFrame(updateHeaderOnScroll);
-  }, { passive: true });
-  if (window.scrollY > 64) setHeaderCompact(true, false);
+  // La cabecera ya es sticky por CSS. Mantener su geometría estable evita el
+  // salto de layout que antes ocurría durante el primer gesto de desplazamiento.
   moveCategoryIndicator(false);
 
   compactSearchToggles.forEach((button) => {
@@ -179,21 +97,36 @@ document.addEventListener("DOMContentLoaded", () => {
     storeHeader.classList.remove("is-search-open");
     compactSearchToggles.forEach((button) => button.setAttribute("aria-expanded", "false"));
   });
-  reducedMotionQuery.addEventListener("change", (event) => {
-    if (!event.matches) return;
-    headerTransitionVersion += 1;
-    if (headerAnimationFrame) cancelAnimationFrame(headerAnimationFrame);
-    headerAnimationFrame = 0;
-    headerAnimations.forEach((animation) => animation.cancel());
-    headerAnimations.clear();
-  });
-
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   }[character]));
   let animateFirstCatalogRender = true;
   let animateNextCategoryRender = false;
   let animateNextCatalogRender = false;
+  let newBadgeTimer = 0;
+
+  const isProductNew = (product, now = Date.now()) => {
+    if (!product?.isNew) return false;
+    if (!product.newUntil) return true;
+    const expiresAt = Date.parse(product.newUntil);
+    return Number.isFinite(expiresAt) && expiresAt > now;
+  };
+
+  const scheduleNewBadgeRefresh = () => {
+    if (newBadgeTimer) window.clearTimeout(newBadgeTimer);
+    const now = Date.now();
+    const nextExpiration = state.products.reduce((nearest, product) => {
+      if (!product?.isNew || !product.newUntil) return nearest;
+      const expiresAt = Date.parse(product.newUntil);
+      return Number.isFinite(expiresAt) && expiresAt > now ? Math.min(nearest, expiresAt) : nearest;
+    }, Number.POSITIVE_INFINITY);
+    if (!Number.isFinite(nextExpiration)) return;
+    newBadgeTimer = window.setTimeout(() => {
+      newBadgeTimer = 0;
+      applyFilters();
+      scheduleNewBadgeRefresh();
+    }, Math.max(0, nextExpiration - now + 50));
+  };
 
   const loadSavedCart = () => {
     try {
@@ -647,11 +580,11 @@ document.addEventListener("DOMContentLoaded", () => {
         <article class="product-card-anim product-card group" data-id="${escapeHtml(product.id)}">
           <div class="product-card-media">
             <button type="button" class="product-image-trigger" data-id="${escapeHtml(product.id)}" aria-label="Ver detalles de ${escapeHtml(product.name)}">
-              <img src="${escapeHtml(productImage)}" alt="" loading="lazy" />
+              <img src="${escapeHtml(productImage)}" alt="" width="640" height="640" loading="lazy" decoding="async" />
             </button>
             <div class="product-card-badges" aria-label="Etiquetas del producto">
               ${product.onSale ? `<span class="product-badge product-badge-sale">${hasDiscount ? `-${discountPercent}%` : "Oferta"}</span>` : ""}
-              ${product.isNew ? `<span class="product-badge product-badge-new">Nuevo</span>` : ""}
+              ${isProductNew(product) ? `<span class="product-badge product-badge-new">Nuevo</span>` : ""}
             </div>
             ${product.featured ? `<span class="product-badge product-badge-featured">Selección DM</span>` : ""}
             <span class="product-image-prompt" aria-hidden="true">Ver producto <i class="fa-solid fa-arrow-up-right-from-square"></i></span>
@@ -677,17 +610,10 @@ document.addEventListener("DOMContentLoaded", () => {
       })
       .join("");
 
-    // Animación de entrada en cascada con Anime.js (Staggering)
-    if (animateFirstCatalogRender && !prefersReducedMotion) {
-      animate(".product-card-anim", {
-        y: [16, 0],
-        opacity: [0, 1],
-        delay: stagger(36, { start: 12 }),
-        duration: 280,
-        ease: "outCubic"
-      });
-    } else if ((animateNextCategoryRender || animateNextCatalogRender) && !prefersReducedMotion) {
-      productsGrid.querySelectorAll(".product-card-anim").forEach((card, index) => {
+    // La carga inicial queda quieta para no competir con el primer scroll. En
+    // cambios de filtro sólo se anima el primer bloque visible del catálogo.
+    if (!animateFirstCatalogRender && (animateNextCategoryRender || animateNextCatalogRender) && !prefersReducedMotion) {
+      [...productsGrid.querySelectorAll(".product-card-anim")].slice(0, 8).forEach((card, index) => {
         const entrance = card.animate([
           { opacity: 0.45, transform: "translate3d(0, 3px, 0)" },
           { opacity: 1, transform: "translate3d(0, 0, 0)" }
@@ -1676,6 +1602,7 @@ ${itemsText}
     renderMobileCategoryCards();
     initBrandFilter();
     applyFilters();
+    scheduleNewBadgeRefresh();
     updateCartBadge();
   };
 
