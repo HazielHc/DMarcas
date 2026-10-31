@@ -194,6 +194,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const mobileCategoryBack = document.getElementById("mobileCategoryBack");
   const mobileCategoryTitle = document.getElementById("mobileCategoryTitle");
   const mobileCategoryCount = document.getElementById("mobileCategoryCount");
+  const mobileCatalogTransition = document.getElementById("mobileCatalogTransition");
   const mobileCategoryGroups = new Map();
   const brandSelect = document.getElementById("brandSelect");
   const saleOnlyCheckbox = document.getElementById("saleOnlyCheckbox");
@@ -783,42 +784,117 @@ document.addEventListener("DOMContentLoaded", () => {
     applyFilters();
   };
 
+  let mobileCatalogTransitionVersion = 0;
+  let mobileCatalogTransitionAnimations = [];
+  const runMobileCatalogTransition = async (updateView, { direction = "forward" } = {}) => {
+    if (!mobileCatalogTransition || !window.matchMedia("(max-width: 767px)").matches) {
+      updateView();
+      return;
+    }
+
+    const version = ++mobileCatalogTransitionVersion;
+    const presentationTransform = mobileCatalogTransition.hidden
+      ? null
+      : getComputedStyle(mobileCatalogTransition).transform;
+    mobileCatalogTransitionAnimations.forEach((animation) => animation.cancel());
+    mobileCatalogTransitionAnimations = [];
+    mobileCatalogTransition.hidden = false;
+
+    const reversed = direction === "back";
+    const startTransform = presentationTransform && presentationTransform !== "none"
+      ? presentationTransform
+      : reversed ? "translate3d(-100%, 0, 0)" : "translate3d(0%, 0, 0)";
+    const centerTransform = "translate3d(-50%, 0, 0)";
+    const endTransform = reversed ? "translate3d(0%, 0, 0)" : "translate3d(-100%, 0, 0)";
+    const reducedMotion = reducedMotionQuery.matches;
+
+    try {
+      const coverAnimation = mobileCatalogTransition.animate(
+        reducedMotion
+          ? [{ opacity: 0, transform: centerTransform }, { opacity: 1, transform: centerTransform }]
+          : [{ transform: startTransform }, { transform: centerTransform }],
+        {
+          duration: reducedMotion ? 90 : 130,
+          easing: "cubic-bezier(0.77, 0, 0.175, 1)",
+          fill: "forwards"
+        }
+      );
+      mobileCatalogTransitionAnimations = [coverAnimation];
+      await coverAnimation.finished.catch(() => {});
+      if (version !== mobileCatalogTransitionVersion) return;
+
+      updateView();
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      if (version !== mobileCatalogTransitionVersion) return;
+
+      const revealAnimation = mobileCatalogTransition.animate(
+        reducedMotion
+          ? [{ opacity: 1, transform: centerTransform }, { opacity: 0, transform: centerTransform }]
+          : [{ transform: centerTransform }, { transform: endTransform }],
+        {
+          duration: reducedMotion ? 110 : 150,
+          easing: "cubic-bezier(0.77, 0, 0.175, 1)",
+          fill: "forwards"
+        }
+      );
+      mobileCatalogTransitionAnimations = [revealAnimation];
+      await revealAnimation.finished.catch(() => {});
+    } finally {
+      if (version === mobileCatalogTransitionVersion) {
+        mobileCatalogTransitionAnimations = [];
+        mobileCatalogTransition.hidden = true;
+        mobileCatalogTransition.style.removeProperty("transform");
+        mobileCatalogTransition.style.removeProperty("opacity");
+      }
+    }
+  };
+
   mobileCategoryGrid?.addEventListener("click", (event) => {
     const audienceCard = event.target.closest("[data-mobile-audience]");
     if (audienceCard) {
-      openMobilePerfumeAudience(audienceCard.getAttribute("data-mobile-audience"));
+      void runMobileCatalogTransition(() => {
+        openMobilePerfumeAudience(audienceCard.getAttribute("data-mobile-audience"));
+      });
       return;
     }
     const card = event.target.closest("[data-mobile-category]");
-    if (card) openMobileCategory(card.getAttribute("data-mobile-category"));
+    if (card) {
+      void runMobileCatalogTransition(() => {
+        openMobileCategory(card.getAttribute("data-mobile-category"));
+      });
+    }
   });
 
   mobileCategoryHomeBack?.addEventListener("click", () => {
-    state.mobileCategoryStep = "categories";
-    state.mobilePerfumeAudience = "";
-    renderMobileCategoryCards();
-    showMobileCategoryHome();
+    void runMobileCatalogTransition(() => {
+      state.mobileCategoryStep = "categories";
+      state.mobilePerfumeAudience = "";
+      renderMobileCategoryCards();
+      showMobileCategoryHome();
+    }, { direction: "back" });
   });
 
   mobileCategoryBack?.addEventListener("click", () => {
-    const returnToAudiences = Boolean(state.mobilePerfumeAudience);
-    state.mobileCategoryGroupId = null;
-    state.mobileCategoryStep = returnToAudiences ? "audiences" : "categories";
-    state.mobilePerfumeAudience = "";
-    state.selectedCategory = "all";
-    state.selectedBrand = "all";
-    state.searchQuery = "";
-    state.onlySale = false;
-    if (searchInput) searchInput.value = "";
-    if (searchInputMobile) searchInputMobile.value = "";
-    brandSelect.value = "all";
-    saleOnlyCheckbox.checked = false;
-    updateCategoryControls("all");
-    renderMobileCategoryCards();
-    showMobileCategoryHome();
-    closeMobileSearch();
-    applyFilters();
-    mobileCategoryHome?.scrollIntoView({ behavior: prefersReducedMotion ? "instant" : "smooth", block: "start" });
+    void runMobileCatalogTransition(() => {
+      const returnToAudiences = Boolean(state.mobilePerfumeAudience);
+      state.mobileCategoryGroupId = null;
+      state.mobileCategoryStep = returnToAudiences ? "audiences" : "categories";
+      state.mobilePerfumeAudience = "";
+      state.selectedCategory = "all";
+      state.selectedBrand = "all";
+      state.searchQuery = "";
+      state.onlySale = false;
+      if (searchInput) searchInput.value = "";
+      if (searchInputMobile) searchInputMobile.value = "";
+      brandSelect.value = "all";
+      saleOnlyCheckbox.checked = false;
+      updateCategoryControls("all");
+      renderMobileCategoryCards();
+      showMobileCategoryHome();
+      closeMobileSearch();
+      applyFilters();
+      mobileCategoryHome?.scrollIntoView({ behavior: prefersReducedMotion ? "instant" : "smooth", block: "start" });
+    }, { direction: "back" });
   });
 
   // 4. Modal de Detalle Interactivo con animación suave Anime.js
