@@ -223,11 +223,19 @@
         </button>
         <div class="mobile-category-results-title">
           <h2 id="mobileCategoryTitle">Perfumes</h2>
-          <p id="mobileCategoryCount" aria-live="polite"></p>
+          <p id="mobileCategoryCount" class="sr-only" aria-live="polite"></p>
         </div>
         <button type="button" class="mobile-filter-toggle" id="mobileFilterToggle" aria-expanded="false" aria-controls="catalogAdvancedFilters">
           <i class="fa-solid fa-sliders" aria-hidden="true"></i><span>Filtros</span>
         </button>
+        <div class="mobile-perfume-segment-filters" id="mobilePerfumeSegmentFilters" role="group" aria-label="Filtrar perfumes por tipo" hidden>
+          <button type="button" class="mobile-perfume-segment" data-perfume-segment="Diseñador" aria-pressed="false">
+            <i class="fa-solid fa-gem" aria-hidden="true"></i><span>Diseñador</span>
+          </button>
+          <button type="button" class="mobile-perfume-segment" data-perfume-segment="Árabe" aria-pressed="false">
+            <i class="fa-solid fa-moon" aria-hidden="true"></i><span>Árabes</span>
+          </button>
+        </div>
       </div>
 
       <!-- Encabezado de Catálogo y Filtros -->
