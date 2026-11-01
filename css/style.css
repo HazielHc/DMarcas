@@ -33,6 +33,11 @@
   --ui-radius-card: 22px;
   --ui-radius-panel: 28px;
   --ui-radius-pill: 9999px;
+  --catalog-charcoal-start: #303236;
+  --catalog-charcoal-mid: #35373b;
+  --catalog-charcoal-end: #3b3d41;
+  --catalog-on-charcoal: #faf7f1;
+  --catalog-on-charcoal-muted: #d8d3ca;
 }
 
 button,
@@ -2428,4 +2433,37 @@ input[type="checkbox"] { border-radius: var(--ui-radius-pill); }
     gap: 0;
   }
   #storeHeader.is-compact #headerMainRow { height: 64px; }
+}
+
+/* Fondo editorial del catálogo: carbón suave, sin negro puro ni cambios bruscos. */
+#catalogoSection {
+  min-height: 100dvh;
+  background: linear-gradient(145deg, var(--catalog-charcoal-start) 0%, var(--catalog-charcoal-mid) 52%, var(--catalog-charcoal-end) 100%);
+  color: var(--catalog-on-charcoal);
+}
+#catalogoSection .catalog-controls { border-bottom-color: rgb(250 247 241 / .18); }
+#catalogoSection .catalog-heading-wrapper h2,
+#catalogoSection .catalog-sort-select > span { color: var(--catalog-on-charcoal); }
+#catalogoSection #productsCount { color: var(--catalog-on-charcoal-muted); }
+
+@media (max-width: 767px) {
+  #catalogoSection {
+    background: linear-gradient(155deg, var(--catalog-charcoal-start) 0%, var(--catalog-charcoal-mid) 58%, var(--catalog-charcoal-end) 100%);
+    color: var(--catalog-on-charcoal);
+  }
+  #catalogoSection .mobile-category-home h2,
+  #catalogoSection .mobile-category-results-title h2 { color: var(--catalog-on-charcoal); }
+  #catalogoSection .mobile-category-description,
+  #catalogoSection .mobile-category-home-back { color: var(--catalog-on-charcoal-muted); }
+  #catalogoSection .mobile-category-card,
+  #catalogoSection .product-card {
+    border-color: rgb(255 255 255 / .22);
+    box-shadow: 0 10px 28px rgb(10 11 13 / .12);
+  }
+  #catalogoSection .mobile-category-card:focus-visible,
+  #catalogoSection .mobile-category-back:focus-visible,
+  #catalogoSection .mobile-filter-toggle:focus-visible,
+  #catalogoSection .mobile-perfume-segment:focus-visible {
+    outline-color: #d6b66f;
+  }
 }
