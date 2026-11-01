@@ -153,6 +153,7 @@ document.addEventListener("DOMContentLoaded", () => {
     mobileCategoryGroupId: null,
     mobileCategoryStep: "categories",
     mobilePerfumeAudience: "",
+    mobilePerfumeSegment: "all",
     categoryCovers: {},
     selectedBrand: "all",
     searchQuery: "",
@@ -194,6 +195,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const mobileCategoryBack = document.getElementById("mobileCategoryBack");
   const mobileCategoryTitle = document.getElementById("mobileCategoryTitle");
   const mobileCategoryCount = document.getElementById("mobileCategoryCount");
+  const mobilePerfumeSegmentFilters = document.getElementById("mobilePerfumeSegmentFilters");
   const mobileCatalogTransition = document.getElementById("mobileCatalogTransition");
   const mobileCategoryGroups = new Map();
   const brandSelect = document.getElementById("brandSelect");
@@ -312,6 +314,13 @@ document.addEventListener("DOMContentLoaded", () => {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLocaleLowerCase("es-MX");
+
+  const getPerfumeMarketSegment = (product) => {
+    const saved = String(product?.details?.marketSegment || "").trim();
+    if (["Diseñador", "Árabe"].includes(saved)) return saved;
+    const signature = normalizeCategoryKey(`${product?.brand || ""} ${product?.name || ""}`);
+    return /afnan|afan|armaf|lattafa|rasasi|hawas|odyssey/.test(signature) ? "Árabe" : "Diseñador";
+  };
 
   const getMobileCategoryGroup = (product) => {
     const category = String(product.category || "Otros").trim();
@@ -459,6 +468,10 @@ document.addEventListener("DOMContentLoaded", () => {
         normalizeCategoryKey(product.category) === "perfumes"
         && [selectedAudience, "unisex"].includes(normalizeCategoryKey(product.gender))
       );
+    }
+
+    if (state.mobilePerfumeAudience && state.mobilePerfumeSegment !== "all" && window.matchMedia("(max-width: 767px)").matches) {
+      result = result.filter((product) => getPerfumeMarketSegment(product) === state.mobilePerfumeSegment);
     }
 
     // Filtro por marca
@@ -662,6 +675,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (mobileCategoryHome) mobileCategoryHome.hidden = false;
     if (mobileCategoryResultsHeader) mobileCategoryResultsHeader.hidden = true;
     if (mobileFilterToggle) mobileFilterToggle.setAttribute("aria-expanded", "false");
+    if (mobilePerfumeSegmentFilters) mobilePerfumeSegmentFilters.hidden = true;
     catalogControls?.classList.remove("filters-open");
   };
 
@@ -670,6 +684,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (mobileCategoryHome) mobileCategoryHome.hidden = true;
     if (mobileCategoryResultsHeader) mobileCategoryResultsHeader.hidden = false;
     if (mobileCategoryTitle) mobileCategoryTitle.textContent = title;
+    if (mobilePerfumeSegmentFilters) mobilePerfumeSegmentFilters.hidden = !state.mobilePerfumeAudience;
+    mobilePerfumeSegmentFilters?.querySelectorAll("[data-perfume-segment]").forEach((button) => {
+      const active = button.dataset.perfumeSegment === state.mobilePerfumeSegment;
+      button.setAttribute("aria-pressed", String(active));
+    });
   };
 
   const closeMobileSearch = ({ restoreFocus = false } = {}) => {
@@ -695,6 +714,7 @@ document.addEventListener("DOMContentLoaded", () => {
     state.mobileCategoryGroupId = null;
     state.mobileCategoryStep = "categories";
     state.mobilePerfumeAudience = "";
+    state.mobilePerfumeSegment = "all";
     state.selectedCategory = "all";
     state.selectedBrand = "all";
     state.searchQuery = "";
@@ -729,6 +749,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (normalizeCategoryKey(group.label) === "perfumes") {
       state.mobileCategoryStep = "audiences";
       state.mobilePerfumeAudience = "";
+      state.mobilePerfumeSegment = "all";
       state.mobileCategoryGroupId = null;
       state.selectedCategory = "all";
       state.selectedBrand = "all";
@@ -747,6 +768,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     state.mobileCategoryStep = "products";
     state.mobilePerfumeAudience = "";
+    state.mobilePerfumeSegment = "all";
     state.mobileCategoryGroupId = group.id;
     state.selectedCategory = group.category;
     state.selectedBrand = "all";
@@ -768,6 +790,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!perfumeGroup) return;
     state.mobileCategoryStep = "products";
     state.mobilePerfumeAudience = audience;
+    state.mobilePerfumeSegment = "all";
     state.mobileCategoryGroupId = perfumeGroup.id;
     state.selectedCategory = perfumeGroup.category;
     state.selectedBrand = "all";
@@ -877,6 +900,7 @@ document.addEventListener("DOMContentLoaded", () => {
     void runMobileCatalogTransition(() => {
       state.mobileCategoryStep = "categories";
       state.mobilePerfumeAudience = "";
+      state.mobilePerfumeSegment = "all";
       renderMobileCategoryCards();
       showMobileCategoryHome();
     });
@@ -888,6 +912,7 @@ document.addEventListener("DOMContentLoaded", () => {
       state.mobileCategoryGroupId = null;
       state.mobileCategoryStep = returnToAudiences ? "audiences" : "categories";
       state.mobilePerfumeAudience = "";
+      state.mobilePerfumeSegment = "all";
       state.selectedCategory = "all";
       state.selectedBrand = "all";
       state.searchQuery = "";
@@ -1500,6 +1525,7 @@ ${itemsText}
     state.mobileCategoryGroupId = null;
     state.mobileCategoryStep = "categories";
     state.mobilePerfumeAudience = "";
+    state.mobilePerfumeSegment = "all";
     state.selectedCategory = category;
     updateCategoryControls(category);
     applyFilters();
@@ -1530,6 +1556,17 @@ ${itemsText}
     const open = mobileFilterToggle.getAttribute("aria-expanded") !== "true";
     mobileFilterToggle.setAttribute("aria-expanded", String(open));
     catalogControls?.classList.toggle("filters-open", open);
+  });
+  mobilePerfumeSegmentFilters?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-perfume-segment]");
+    if (!button) return;
+    const selectedSegment = button.dataset.perfumeSegment;
+    state.mobilePerfumeSegment = state.mobilePerfumeSegment === selectedSegment ? "all" : selectedSegment;
+    mobilePerfumeSegmentFilters.querySelectorAll("[data-perfume-segment]").forEach((segmentButton) => {
+      segmentButton.setAttribute("aria-pressed", String(segmentButton.dataset.perfumeSegment === state.mobilePerfumeSegment));
+    });
+    animateNextCatalogRender = true;
+    applyFilters();
   });
   let mobileCategoryPointerActivation = false;
   categorySelectMobile?.addEventListener("pointerdown", () => { mobileCategoryPointerActivation = true; }, { passive: true });
@@ -1585,6 +1622,7 @@ ${itemsText}
     state.mobileCategoryGroupId = null;
     state.mobileCategoryStep = "categories";
     state.mobilePerfumeAudience = "";
+    state.mobilePerfumeSegment = "all";
     state.selectedCategory = "all";
     if (categorySelectMobile) categorySelectMobile.value = "all";
     state.selectedBrand = "all";

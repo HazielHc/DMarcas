@@ -7,6 +7,7 @@ import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { PRODUCTS as SEED_PRODUCTS } from "../js/products.js";
+import { CATALOG_EXPANSION_ID, CATALOG_EXPANSION_PRODUCTS } from "../js/catalog-expansion.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = Number(process.env.PORT || 3001);
@@ -17,6 +18,7 @@ const PRODUCTS_FILE = path.join(DATA_DIR, "products.json");
 const CATEGORIES_FILE = path.join(DATA_DIR, "categories.json");
 const CATEGORY_COVERS_FILE = path.join(DATA_DIR, "category-covers.json");
 const FRAGRANCE_FAMILIES_FILE = path.join(DATA_DIR, "fragrance-families.json");
+const MIGRATIONS_FILE = path.join(DATA_DIR, "catalog-migrations.json");
 const PRODUCT_IMAGES_DIR = path.join(DATA_DIR, "product-images");
 const SESSION_COOKIE = "__Host-dm-admin";
 const SESSION_TTL_SECONDS = 60 * 60 * 12;
@@ -38,6 +40,7 @@ const DEFAULT_FRAGRANCE_FAMILIES = ["Cítrica", "Floral", "Amaderada", "Aromáti
 let categories = [...DEFAULT_CATEGORIES];
 let categoryCovers = {};
 let fragranceFamilies = [...DEFAULT_FRAGRANCE_FAMILIES];
+let appliedMigrations = [];
 let writeQueue = Promise.resolve();
 
 app.disable("x-powered-by");
@@ -211,7 +214,8 @@ function normalizeProduct(input, id, previousProduct = null) {
       type: cleanText(rawDetails.type, "El tipo de producto", 80),
       material: cleanText(rawDetails.material, "El material", 100),
       fragranceFamily: cleanText(rawDetails.fragranceFamily, "La familia olfativa", 80),
-      concentration: cleanText(rawDetails.concentration, "La concentración", 60)
+      concentration: cleanText(rawDetails.concentration, "La concentración", 60),
+      marketSegment: cleanText(rawDetails.marketSegment, "El segmento", 40)
     },
     description: cleanText(input.description, "La descripción", 2000),
     features: stringList(input.features, "Las características", 12, 240)
@@ -243,8 +247,21 @@ async function persistProducts(nextProducts) {
   await writeQueue;
 }
 
+async function persistMigrations(nextMigrations) {
+  const temporaryFile = `${MIGRATIONS_FILE}.tmp`;
+  await writeFile(temporaryFile, `${JSON.stringify(nextMigrations, null, 2)}\n`, "utf8");
+  await rename(temporaryFile, MIGRATIONS_FILE);
+}
+
 function categoryKey(value) {
   return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-MX").trim();
+}
+
+function inferPerfumeMarketSegment(product) {
+  const saved = cleanText(product?.details?.marketSegment, "El segmento", 40);
+  if (saved === "Árabe" || saved === "Diseñador") return saved;
+  const brand = categoryKey(`${product?.brand || ""} ${product?.name || ""}`);
+  return /afnan|afan|armaf|lattafa|rasasi|hawas|odyssey/.test(brand) ? "Árabe" : "Diseñador";
 }
 
 function isCategoryCoverPath(value) {
@@ -518,6 +535,33 @@ try {
   if (error.code !== "ENOENT") console.error("No se pudo leer products.json; se cargará la semilla inicial.", error.message);
   products = SEED_PRODUCTS.map((product) => ({ ...product }));
   await persistProducts(products);
+}
+
+try {
+  const savedMigrations = JSON.parse(await readFile(MIGRATIONS_FILE, "utf8"));
+  if (!Array.isArray(savedMigrations)) throw new Error("Formato inválido.");
+  appliedMigrations = savedMigrations.filter((migration) => typeof migration === "string");
+} catch (error) {
+  if (error.code !== "ENOENT") console.error("No se pudo leer catalog-migrations.json; se verificará la expansión del catálogo.", error.message);
+  appliedMigrations = [];
+}
+
+if (!appliedMigrations.includes(CATALOG_EXPANSION_ID)) {
+  products = products.map((product) => {
+    if (categoryKey(product.category) !== "perfumes") return product;
+    return {
+      ...product,
+      details: { ...(product.details || {}), marketSegment: inferPerfumeMarketSegment(product) }
+    };
+  });
+  const existingIds = new Set(products.map((product) => product.id));
+  const additions = CATALOG_EXPANSION_PRODUCTS
+    .filter((product) => !existingIds.has(product.id))
+    .map((product) => normalizeProduct(product, product.id));
+  products = [...products, ...additions];
+  appliedMigrations = [...appliedMigrations, CATALOG_EXPANSION_ID];
+  await persistProducts(products);
+  await persistMigrations(appliedMigrations);
 }
 
 const metadataNow = Date.now();
