@@ -1714,7 +1714,11 @@ ${itemsText}
     ]);
     if (productsResult.status === "fulfilled" && productsResult.value.ok) {
       const catalog = await productsResult.value.json().catch(() => null);
-      if (Array.isArray(catalog)) state.products = catalog;
+      if (Array.isArray(catalog)) {
+        state.products = catalog;
+        const publicProductIds = new Set(catalog.map((product) => product.id));
+        state.cart = state.cart.filter((item) => publicProductIds.has(item.id));
+      }
     }
     if (coversResult.status === "fulfilled" && coversResult.value.ok) {
       const covers = await coversResult.value.json().catch(() => null);

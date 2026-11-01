@@ -22,7 +22,7 @@ adminOverlay.innerHTML = `
       <div class="admin-login-copy">
         <p class="admin-eyebrow">Administración · Tepic, Nayarit</p>
         <h2 id="adminTitle">Administra<br />tu catálogo</h2>
-        <p>Inicia sesión para agregar, editar o eliminar productos.</p>
+        <p>Inicia sesión para agregar, editar, ocultar o eliminar productos.</p>
       </div>
       <div class="admin-login-card"><span class="admin-lock-mark" aria-hidden="true"><i class="fa-solid fa-lock"></i></span><h2>Acceso privado</h2><p>Ingresa tu contraseña para continuar.</p>
         <label for="adminPassword">Contraseña de administrador</label>
@@ -37,7 +37,7 @@ adminOverlay.innerHTML = `
           <div><p class="admin-eyebrow">Inventario</p><h2 id="adminProductsTitle">Productos<br />del catálogo</h2><p class="admin-summary" id="adminProductCount"></p></div>
           <button class="admin-button admin-button-primary" type="button" id="adminAddProduct"><span aria-hidden="true">+</span> Agregar producto</button>
         </div>
-        <p class="admin-list-intro">Busca por nombre, marca o categoría.</p>
+        <p class="admin-list-intro">Busca por nombre, marca o categoría. Puedes ocultar un producto sin eliminarlo y volver a publicarlo cuando tengas existencias.</p>
         <label class="sr-only" for="adminSearch">Buscar productos para administrar</label>
         <input id="adminSearch" class="admin-input admin-search" type="search" placeholder="Buscar productos" />
         <div class="admin-product-list" id="adminProductList" data-reveal="media"></div>
@@ -51,7 +51,7 @@ adminOverlay.innerHTML = `
         <ol class="admin-image-steps"><li><span>01</span><h3>Selecciona</h3><p>Elige hasta 12 im&#225;genes desde tu dispositivo en el formulario.</p></li><li><span>02</span><h3>Revisa</h3><p>Comprueba las vistas previas y que el producto se reconozca con claridad.</p></li><li><span>03</span><h3>Ordena</h3><p>Coloca primero la imagen que quieres mostrar en el cat&#225;logo.</p></li><li><span>04</span><h3>Guarda</h3><p>El servidor guarda las im&#225;genes y vincula sus rutas al producto.</p></li></ol>
         <p class="admin-upload-note">Se admiten im&#225;genes JPG, PNG, WebP o GIF de hasta 8 MB cada una. Tras confirmar la subida, se guardan en <code>product-images</code> dentro de <code>DATA_DIR</code> (por defecto, <code>data/product-images</code>).</p>
       </section>
-      <section class="admin-confirmations" aria-labelledby="adminConfirmTitle" data-reveal="rise"><div><p class="admin-eyebrow">Ayuda</p><h2 id="adminConfirmTitle">Guardar con claridad</h2></div><div class="admin-disclosures"><details open><summary>¿Cuándo se confirma un cambio?</summary><p>Después de que el servidor guarda el producto y responde correctamente.</p></details><details><summary>¿Qué pasa si un dato no es válido?</summary><p>El servidor muestra el motivo para que puedas corregir el campo y volver a guardar.</p></details><details><summary>¿Dónde queda la información?</summary><p>Los datos del catálogo se guardan en <code>data/products.json</code> o en la carpeta configurada en <code>DATA_DIR</code>.</p></details><details><summary>¿Cómo se elimina un producto?</summary><p>Elige Eliminar en el producto y confirma la acción antes de que se actualice el catálogo.</p></details><details><summary>¿Qué ocurre al vencer la sesión?</summary><p>Vuelve a iniciar sesión para continuar administrando productos.</p></details></div></section>
+      <section class="admin-confirmations" aria-labelledby="adminConfirmTitle" data-reveal="rise"><div><p class="admin-eyebrow">Ayuda</p><h2 id="adminConfirmTitle">Guardar con claridad</h2></div><div class="admin-disclosures"><details open><summary>¿Cuándo se confirma un cambio?</summary><p>Después de que el servidor guarda el producto y responde correctamente.</p></details><details><summary>¿Cómo oculto un producto sin eliminarlo?</summary><p>Elige Ocultar en su tarjeta. Seguirá guardado en administración y podrás usar Mostrar cuando vuelva a estar disponible.</p></details><details><summary>¿Qué pasa si un dato no es válido?</summary><p>El servidor muestra el motivo para que puedas corregir el campo y volver a guardar.</p></details><details><summary>¿Dónde queda la información?</summary><p>Los datos del catálogo se guardan en <code>data/products.json</code> o en la carpeta configurada en <code>DATA_DIR</code>.</p></details><details><summary>¿Cómo se elimina un producto?</summary><p>Elige Eliminar en el producto y confirma la acción antes de que se actualice el catálogo.</p></details><details><summary>¿Qué ocurre al vencer la sesión?</summary><p>Vuelve a iniciar sesión para continuar administrando productos.</p></details></div></section>
     </div>
     </main>
 
@@ -115,6 +115,7 @@ adminOverlay.innerHTML = `
           </section>
         </div>
         <fieldset class="admin-flags"><legend>Visibilidad en el catálogo</legend>
+          <label><input type="checkbox" name="visible" checked /> Visible en tienda <span class="admin-flag-help">Desmárcalo para conservarlo sin mostrarlo al público.</span></label>
           <label><input type="checkbox" name="onSale" /> En oferta</label>
           <label><input type="checkbox" name="isNew" /> Nuevo ingreso</label>
           <label><input type="checkbox" name="featured" /> Destacado <span class="admin-flag-help">Muestra “Selección DM” en la foto.</span></label>
@@ -256,7 +257,7 @@ const showWorkspace = async () => {
 };
 
 const refreshProducts = async () => {
-  productCache = await adminFetch("/api/products");
+  productCache = await adminFetch("/api/admin/products");
   try { categoryCache = await adminFetch("/api/admin/categories"); } catch { /* La sesión expirada se informa al guardar. */ }
   try { categoryCoversCache = await adminFetch("/api/category-covers"); } catch { categoryCoversCache = {}; }
   try { fragranceFamilyCache = await adminFetch("/api/admin/fragrance-families"); } catch { fragranceFamilyCache = [...perfumeFamilies]; }
@@ -284,7 +285,9 @@ const renderProducts = (query = "") => {
   const visibleProducts = productCache.filter((product) =>
     [product.name, product.brand, product.category].some((value) => String(value).toLocaleLowerCase("es-MX").includes(normalizedQuery))
   );
-  $("#adminProductCount").textContent = `${productCache.length} productos · ${visibleProducts.length} visibles`;
+  const publicCount = productCache.filter((product) => product.visible !== false).length;
+  const hiddenCount = productCache.length - publicCount;
+  $("#adminProductCount").textContent = `${productCache.length} productos · ${publicCount} visibles · ${hiddenCount} ${hiddenCount === 1 ? "oculto" : "ocultos"}`;
   if (visibleProducts.length === 0) {
     productList.innerHTML = `<p class="admin-empty">No hay productos que coincidan con esa búsqueda.</p>`;
     return;
@@ -309,16 +312,16 @@ const renderProducts = (query = "") => {
   })).filter((section) => section.products.length > 0);
 
   const renderProductCard = (product) => `
-    <article class="admin-product-row" data-product-id="${escapeHtml(product.id)}">
+    <article class="admin-product-row${product.visible === false ? " is-hidden" : ""}" data-product-id="${escapeHtml(product.id)}">
       <div class="admin-product-image">${productImagePath(product) ? `<img src="${escapeHtml(productImagePath(product))}" alt="${escapeHtml(product.name)}" loading="lazy" />` : `<span aria-hidden="true">DM</span>`}</div>
-      <div class="admin-product-info"><h3>${escapeHtml(product.name)}</h3><p>${escapeHtml(product.brand)} · ${escapeHtml(product.category)}</p><strong>${money(product.offerPrice)}</strong>${product.onSale && product.regularPrice > product.offerPrice ? `<span class="admin-sale-price"> Antes ${money(product.regularPrice)}</span>` : ""}</div>
+      <div class="admin-product-info"><span class="admin-visibility-status" data-visible="${product.visible !== false}"><i class="fa-solid ${product.visible === false ? "fa-eye-slash" : "fa-eye"}" aria-hidden="true"></i>${product.visible === false ? "Oculto" : "Visible"}</span><h3>${escapeHtml(product.name)}</h3><p>${escapeHtml(product.brand)} · ${escapeHtml(product.category)}</p><strong>${money(product.offerPrice)}</strong>${product.onSale && product.regularPrice > product.offerPrice ? `<span class="admin-sale-price"> Antes ${money(product.regularPrice)}</span>` : ""}</div>
       ${pendingDeleteId === product.id ? `
         <div class="admin-delete-confirm" role="group" aria-label="Confirmar eliminación de ${escapeHtml(product.name)}">
           <p>¿Eliminar este producto del catálogo?</p>
           <button class="admin-button admin-button-danger" type="button" data-action="confirm-delete" data-id="${escapeHtml(product.id)}">Confirmar eliminación</button>
           <button class="admin-button admin-button-quiet" type="button" data-action="cancel-delete" data-id="${escapeHtml(product.id)}">Cancelar</button>
         </div>` : `
-        <div class="admin-row-actions"><button class="admin-button admin-button-quiet" type="button" data-action="edit" data-id="${escapeHtml(product.id)}">Editar</button><button class="admin-button admin-button-danger" type="button" data-action="delete" data-id="${escapeHtml(product.id)}">Eliminar</button></div>`}
+        <div class="admin-row-actions"><button class="admin-button admin-visibility-toggle" type="button" data-action="toggle-visibility" data-id="${escapeHtml(product.id)}" aria-label="${product.visible === false ? "Mostrar" : "Ocultar"} ${escapeHtml(product.name)} en la tienda"><i class="fa-solid ${product.visible === false ? "fa-eye" : "fa-eye-slash"}" aria-hidden="true"></i>${product.visible === false ? "Mostrar" : "Ocultar"}</button><button class="admin-button admin-button-quiet" type="button" data-action="edit" data-id="${escapeHtml(product.id)}">Editar</button><button class="admin-button admin-button-danger" type="button" data-action="delete" data-id="${escapeHtml(product.id)}">Eliminar</button></div>`}
     </article>`;
 
   productList.innerHTML = sections.map((section, index) => `
@@ -361,6 +364,7 @@ const openProductForm = (product = null, selectedCategory = "") => {
   renderColorChoices(product?.colors ?? []);
   fields.description.value = product?.description ?? "";
   fields.features.value = product?.features?.join("\n") ?? "";
+  fields.visible.checked = product?.visible !== false;
   fields.onSale.checked = product?.onSale ?? false;
   fields.isNew.checked = product?.isNew ?? false;
   fields.featured.checked = product?.featured ?? false;
@@ -837,6 +841,7 @@ const formProduct = () => {
     details: categoryDetails,
     description: fields.description.value,
     features: lines(fields.features.value),
+    visible: fields.visible.checked,
     onSale: fields.onSale.checked,
     isNew: fields.isNew.checked,
     featured: fields.featured.checked
@@ -979,6 +984,29 @@ productList.addEventListener("click", async (event) => {
   if (!product) return;
   if (button.dataset.action === "edit") {
     openProductForm(product);
+    return;
+  }
+  if (button.dataset.action === "toggle-visibility") {
+    const nextVisible = product.visible === false;
+    const previousButtonContent = button.innerHTML;
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    button.innerHTML = `<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>${nextVisible ? "Mostrando…" : "Ocultando…"}`;
+    try {
+      await adminFetch(`/api/admin/products/${encodeURIComponent(product.id)}/visibility`, {
+        method: "PATCH",
+        body: JSON.stringify({ visible: nextVisible })
+      });
+      await refreshProducts();
+      window.dispatchEvent(new CustomEvent("catalog:updated"));
+      showMessage(nextVisible ? `${product.name} ahora está visible en la tienda.` : `${product.name} quedó oculto del catálogo público.`);
+      productList.querySelector(`[data-product-id="${CSS.escape(product.id)}"] [data-action="toggle-visibility"]`)?.focus();
+    } catch (error) {
+      showMessage(error.message, true);
+      button.innerHTML = previousButtonContent;
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+    }
     return;
   }
   if (button.dataset.action === "delete") {
