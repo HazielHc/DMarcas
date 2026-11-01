@@ -202,6 +202,7 @@ function normalizeProduct(input, id, previousProduct = null) {
     regularPrice,
     offerPrice,
     onSale: Boolean(input.onSale),
+    visible: input.visible !== false,
     isNew,
     createdAt,
     newUntil,
@@ -236,7 +237,11 @@ function addProductTimeMetadata(product, now = Date.now()) {
 
 function productForClient(product, now = Date.now()) {
   const expiresAt = Date.parse(product?.newUntil || "");
-  return { ...product, isNew: Boolean(product?.isNew && Number.isFinite(expiresAt) && expiresAt > now) };
+  return {
+    ...product,
+    visible: product?.visible !== false,
+    isNew: Boolean(product?.isNew && Number.isFinite(expiresAt) && expiresAt > now)
+  };
 }
 
 async function persistProducts(nextProducts) {
@@ -328,9 +333,16 @@ function handleValidationError(error, res) {
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 app.get("/api/products", (_req, res) => {
   const now = Date.now();
-  res.set("Cache-Control", "no-store").json(products.map((product) => productForClient(product, now)));
+  res.set("Cache-Control", "no-store").json(products
+    .filter((product) => product.visible !== false)
+    .map((product) => productForClient(product, now)));
 });
 app.get("/api/category-covers", (_req, res) => res.set("Cache-Control", "no-store").json(categoryCovers));
+
+app.get("/api/admin/products", ownerOnly, (_req, res) => {
+  const now = Date.now();
+  res.set("Cache-Control", "no-store").json(products.map((product) => productForClient(product, now)));
+});
 
 app.post("/api/admin/category-covers", sameOrigin, ownerOnly, async (req, res) => {
   try {
@@ -484,6 +496,21 @@ app.put("/api/admin/products/:id", sameOrigin, ownerOnly, async (req, res) => {
     res.json(updated);
   } catch (error) {
     handleValidationError(error, res);
+  }
+});
+
+app.patch("/api/admin/products/:id/visibility", sameOrigin, ownerOnly, async (req, res) => {
+  if (typeof req.body?.visible !== "boolean") return res.status(400).json({ error: "Indica si el producto debe estar visible u oculto." });
+  const index = products.findIndex((product) => product.id === req.params.id);
+  if (index < 0) return res.status(404).json({ error: "No se encontró ese producto." });
+  try {
+    const updated = { ...products[index], visible: req.body.visible };
+    const nextProducts = products.map((product, currentIndex) => currentIndex === index ? updated : product);
+    await persistProducts(nextProducts);
+    products = nextProducts;
+    res.json(productForClient(updated));
+  } catch {
+    res.status(500).json({ error: "No se pudo cambiar la visibilidad. Inténtalo de nuevo." });
   }
 });
 
