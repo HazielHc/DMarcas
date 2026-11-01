@@ -8,6 +8,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { PRODUCTS as SEED_PRODUCTS } from "../js/products.js";
 import { CATALOG_EXPANSION_ID, CATALOG_EXPANSION_PRODUCTS } from "../js/catalog-expansion.js";
+import { HAWAS_EXISTING_UPDATES, HAWAS_EXPANSION_ID, HAWAS_EXPANSION_PRODUCTS } from "../js/hawas-expansion.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = Number(process.env.PORT || 3001);
@@ -560,6 +561,32 @@ if (!appliedMigrations.includes(CATALOG_EXPANSION_ID)) {
     .map((product) => normalizeProduct(product, product.id));
   products = [...products, ...additions];
   appliedMigrations = [...appliedMigrations, CATALOG_EXPANSION_ID];
+  await persistProducts(products);
+  await persistMigrations(appliedMigrations);
+}
+
+if (!appliedMigrations.includes(HAWAS_EXPANSION_ID)) {
+  products = products.map((product) => {
+    const update = HAWAS_EXISTING_UPDATES[product.id];
+    if (!update) return product;
+    return {
+      ...product,
+      ...(update.brand ? { brand: update.brand } : {}),
+      ...(update.name ? { name: update.name } : {}),
+      ...(update.gender ? { gender: update.gender } : {}),
+      regularPrice: update.price,
+      offerPrice: update.price,
+      onSale: false,
+      ...(update.image ? { images: [update.image] } : {}),
+      details: { ...(product.details || {}), marketSegment: "Árabe" }
+    };
+  });
+  const existingIds = new Set(products.map((product) => product.id));
+  const additions = HAWAS_EXPANSION_PRODUCTS
+    .filter((product) => !existingIds.has(product.id))
+    .map((product) => normalizeProduct(product, product.id));
+  products = [...products, ...additions];
+  appliedMigrations = [...appliedMigrations, HAWAS_EXPANSION_ID];
   await persistProducts(products);
   await persistMigrations(appliedMigrations);
 }
