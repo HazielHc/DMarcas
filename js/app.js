@@ -550,6 +550,87 @@ document.addEventListener("DOMContentLoaded", () => {
     ).join("");
   };
 
+  const balanceProductImageFrame = (image) => {
+    if (!(image instanceof HTMLImageElement) || image.dataset.frameBalanced === "true") return;
+    image.dataset.frameBalanced = "true";
+
+    const measure = () => {
+      const run = () => {
+        try {
+          const sampleSize = 64;
+          const canvas = document.createElement("canvas");
+          canvas.width = sampleSize;
+          canvas.height = sampleSize;
+          const context = canvas.getContext("2d", { willReadFrequently: true });
+          if (!context || !image.naturalWidth || !image.naturalHeight) return;
+
+          context.fillStyle = "#fff";
+          context.fillRect(0, 0, sampleSize, sampleSize);
+          const fit = Math.min(sampleSize / image.naturalWidth, sampleSize / image.naturalHeight);
+          const width = image.naturalWidth * fit;
+          const height = image.naturalHeight * fit;
+          context.drawImage(image, (sampleSize - width) / 2, (sampleSize - height) / 2, width, height);
+
+          const pixels = context.getImageData(0, 0, sampleSize, sampleSize).data;
+          const corners = [[1, 1], [sampleSize - 2, 1], [1, sampleSize - 2], [sampleSize - 2, sampleSize - 2]];
+          const background = corners.reduce((sum, [x, y]) => {
+            const index = (y * sampleSize + x) * 4;
+            sum[0] += pixels[index];
+            sum[1] += pixels[index + 1];
+            sum[2] += pixels[index + 2];
+            return sum;
+          }, [0, 0, 0]).map((value) => value / corners.length);
+
+          let minX = sampleSize;
+          let minY = sampleSize;
+          let maxX = -1;
+          let maxY = -1;
+          for (let y = 0; y < sampleSize; y += 1) {
+            for (let x = 0; x < sampleSize; x += 1) {
+              const index = (y * sampleSize + x) * 4;
+              const difference = Math.abs(pixels[index] - background[0])
+                + Math.abs(pixels[index + 1] - background[1])
+                + Math.abs(pixels[index + 2] - background[2]);
+              if (pixels[index + 3] < 24 || difference < 42) continue;
+              minX = Math.min(minX, x);
+              minY = Math.min(minY, y);
+              maxX = Math.max(maxX, x);
+              maxY = Math.max(maxY, y);
+            }
+          }
+
+          if (maxX < 0 || maxY < 0) return;
+          const occupiedWidth = (maxX - minX + 1) / sampleSize;
+          const occupiedHeight = (maxY - minY + 1) / sampleSize;
+          const occupiedSize = Math.max(occupiedWidth, occupiedHeight);
+          if (occupiedSize < 0.18) return;
+
+          const zoom = Math.min(1.68, Math.max(1.04, 0.79 / occupiedSize));
+          const centerX = ((minX + maxX + 1) / 2) / sampleSize;
+          const centerY = ((minY + maxY + 1) / 2) / sampleSize;
+          const shiftX = Math.max(-10, Math.min(10, -zoom * (centerX - 0.5) * 100));
+          const shiftY = Math.max(-10, Math.min(10, -zoom * (centerY - 0.5) * 100));
+
+          image.style.setProperty("--product-image-zoom", zoom.toFixed(3));
+          image.style.setProperty("--product-image-shift-x", `${shiftX.toFixed(2)}%`);
+          image.style.setProperty("--product-image-shift-y", `${shiftY.toFixed(2)}%`);
+        } catch {
+          // Las imágenes remotas sin CORS conservan el encuadre CSS seguro.
+        }
+      };
+
+      if ("requestIdleCallback" in window) window.requestIdleCallback(run, { timeout: 500 });
+      else window.setTimeout(run, 0);
+    };
+
+    if (image.complete && image.naturalWidth) measure();
+    else image.addEventListener("load", measure, { once: true });
+  };
+
+  const balanceProductImageFrames = (container) => {
+    container?.querySelectorAll(".product-image-trigger img").forEach(balanceProductImageFrame);
+  };
+
   const renderProducts = () => {
     productsCountEl.textContent = `${state.filteredProducts.length} DISPONIBLES`;
     if (mobileCategoryCount) {
@@ -667,7 +748,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       });
     });
+    balanceProductImageFrames(productsGrid);
     syncMobileSearchResults();
+    balanceProductImageFrames(mobileSearchResults);
   };
 
   const showMobileCategoryHome = () => {
