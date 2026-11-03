@@ -1751,22 +1751,6 @@ input[type="checkbox"] { border-radius: var(--ui-radius-pill); }
   }
   .mobile-category-empty { grid-column: 1 / -1; margin: 0; color: #626262; font-size: 14px; }
 
-  .mobile-catalog-transition {
-    position: fixed;
-    z-index: 65;
-    inset: 0;
-    display: block;
-    width: 100%;
-    height: 100dvh;
-    background: rgb(17 18 20 / .08);
-    opacity: 0;
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
-    pointer-events: none;
-    contain: strict;
-  }
-  .mobile-catalog-transition[hidden] { display: none; }
-
   #catalogoSection.mobile-category-open .mobile-category-home { display: none; }
   #catalogoSection.mobile-category-open .mobile-category-results-header { display: flex; }
   #catalogoSection:not(.mobile-category-open) .catalog-controls,
@@ -1862,10 +1846,6 @@ input[type="checkbox"] { border-radius: var(--ui-radius-pill); }
     padding: 8px 0 12px;
   }
   #catalogoSection.mobile-category-open #productsGrid { padding-top: 12px; }
-}
-
-@media (min-width: 768px) {
-  .mobile-catalog-transition { display: none !important; }
 }
 
 /* Imágenes de catálogo móvil: encuadre consistente y radios visibles. */
@@ -2636,4 +2616,285 @@ input[type="checkbox"] { border-radius: var(--ui-radius-pill); }
     font-weight: 500;
     text-align: center;
   }
+}
+
+/* Navegación del catálogo compartida: las mismas tarjetas y niveles en escritorio. */
+@media (min-width: 768px) {
+  #storeHeader.is-compact.is-search-open .brand-copy {
+    opacity: 0;
+    transform: translateX(-8px);
+    pointer-events: none;
+  }
+  #catalogoSection { padding-top: 36px; }
+  .mobile-category-home { display: block; }
+  .mobile-category-home[hidden],
+  .mobile-category-results-header[hidden],
+  .mobile-perfume-segment-filters[hidden] { display: none !important; }
+  .mobile-category-home h2 {
+    margin: 0 0 22px;
+    color: var(--catalog-ink);
+    font-family: var(--font-editorial), Georgia, serif;
+    font-size: clamp(34px, 3.2vw, 46px);
+    font-weight: 600;
+    line-height: 1.05;
+    letter-spacing: -.035em;
+  }
+  .mobile-category-description {
+    margin: -10px 0 26px;
+    color: var(--catalog-muted);
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  .mobile-category-home-back {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 20px;
+    color: var(--catalog-muted);
+    font-size: 14px;
+    font-weight: 650;
+  }
+  .mobile-category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 280px));
+    justify-content: center;
+    gap: 22px;
+  }
+  .mobile-category-grid.is-audience-grid {
+    grid-template-columns: repeat(2, minmax(0, 340px));
+    justify-content: center;
+  }
+  .mobile-category-card {
+    display: grid;
+    min-width: 0;
+    min-height: 44px;
+    grid-template-rows: 1fr auto;
+    overflow: hidden;
+    padding: 0;
+    border: 1px solid rgb(17 18 20 / .05);
+    border-radius: var(--ui-radius-card);
+    background: var(--catalog-card);
+    color: var(--catalog-ink);
+    text-align: left;
+    box-shadow: var(--catalog-card-shadow);
+    cursor: pointer;
+    transition: border-color 180ms ease, transform 180ms cubic-bezier(.23, 1, .32, 1);
+  }
+  .mobile-category-card:focus-visible {
+    outline: 3px solid #111214;
+    outline-offset: 3px;
+  }
+  .mobile-category-image {
+    display: grid;
+    min-width: 0;
+    aspect-ratio: 1.16 / 1;
+    place-items: center;
+    overflow: hidden;
+    padding: 10px;
+    border-radius: 21px 21px 0 0;
+    background: #fff;
+  }
+  .mobile-category-image img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 16px;
+    object-fit: contain;
+  }
+  .mobile-category-card-label {
+    display: flex;
+    min-height: 64px;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 0 18px;
+    color: var(--catalog-ink);
+    font-family: var(--font-sans);
+    font-size: 17px;
+    font-weight: 550;
+    letter-spacing: -.01em;
+    line-height: 1.25;
+    text-align: center;
+  }
+  .mobile-category-card-label i { color: #666; font-size: 12px; }
+  .mobile-category-grid > .mobile-category-card:only-child {
+    grid-column: 1 / -1;
+    width: min(100%, 300px);
+    justify-self: center;
+  }
+  .mobile-category-empty { grid-column: 1 / -1; color: var(--catalog-muted); text-align: center; }
+  #catalogoSection:not(.mobile-category-open) .catalog-controls,
+  #catalogoSection:not(.mobile-category-open) #productsGrid { display: none; }
+  #catalogoSection.mobile-category-open .mobile-category-home { display: none; }
+  #catalogoSection.mobile-category-open .mobile-category-results-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  #catalogoSection.mobile-category-open .catalog-controls {
+    display: flex;
+    padding: 0 0 20px;
+    border-bottom: 1px solid #dededb;
+  }
+  #catalogoSection.mobile-category-open .catalog-heading-wrapper { display: none; }
+  #catalogoSection.mobile-category-open .catalog-advanced-filters { display: flex; }
+  #catalogoSection.mobile-category-open #productsGrid { display: grid; padding-top: 24px; }
+  .mobile-category-results-title { min-width: 0; flex: 1; }
+  .mobile-category-results-title h2 {
+    margin: 0;
+    color: var(--catalog-ink);
+    font-family: var(--font-editorial), Georgia, serif;
+    font-size: clamp(28px, 2.8vw, 38px);
+    font-weight: 600;
+    line-height: 1.08;
+    letter-spacing: -.03em;
+  }
+  .mobile-category-back {
+    display: grid;
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    place-items: center;
+    border: 1px solid #dededb;
+    border-radius: 50%;
+    background: #fff;
+    color: var(--catalog-ink);
+    font-size: 16px;
+    cursor: pointer;
+    transition: border-color 160ms ease, background-color 160ms ease, transform 160ms cubic-bezier(.23, 1, .32, 1);
+  }
+  .mobile-category-back:active { transform: scale(.97); }
+  .mobile-category-back:focus-visible { outline: 2px solid #111214; outline-offset: 3px; }
+  .mobile-filter-toggle { display: none; }
+  .mobile-perfume-segment-filters {
+    display: grid;
+    flex: 0 0 auto;
+    grid-template-columns: repeat(2, minmax(148px, 1fr));
+    gap: 10px;
+  }
+  .mobile-perfume-segment {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 18px;
+    border: 1px solid #cfcac1;
+    border-radius: 999px;
+    background: #fff;
+    color: #262421;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 100ms ease, border-color 100ms ease, color 100ms ease, transform 100ms cubic-bezier(.23, 1, .32, 1);
+  }
+  .mobile-perfume-segment i { color: #8a6a26; }
+  .mobile-perfume-segment[aria-pressed="true"] { border-color: #171716; background: #171716; color: #fff; }
+  .mobile-perfume-segment[aria-pressed="true"] i { color: #e2bd66; }
+  .mobile-perfume-segment:active { transform: scale(.98); }
+  .mobile-perfume-segment:focus-visible { outline: 2px solid #171716; outline-offset: 2px; }
+}
+
+@media (min-width: 768px) and (max-width: 1099px) {
+  .mobile-category-grid { grid-template-columns: repeat(auto-fit, minmax(210px, 280px)); gap: 16px; }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .mobile-category-card:hover { border-color: rgb(17 18 20 / .18); transform: translate3d(0, -2px, 0); }
+  .mobile-category-back:hover { border-color: #a88339; background: #faf8f3; }
+}
+
+/* Una computadora con zoom conserva la cabecera completa aunque baje de 768 px CSS. */
+@media (min-width: 640px) and (max-width: 767px) and (any-hover: hover) and (any-pointer: fine) {
+  .announcement-bar { display: block; }
+  .hero-section,
+  .benefits-section { display: block; }
+  #storeHeader .mobile-brand-strip { display: none; }
+  #storeHeader #headerMainRow {
+    display: flex;
+    height: 80px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  #storeHeader #brandHomeLink {
+    display: flex;
+    width: auto;
+    height: auto;
+    flex: 0 1 auto;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+  #storeHeader #brandHomeLink .brand-logo-frame {
+    width: 56px !important;
+    height: 56px !important;
+    min-width: 56px !important;
+    max-width: 56px !important;
+    min-height: 56px !important;
+    max-height: 56px !important;
+  }
+  #storeHeader #brandHomeLink .brand-copy { display: flex; }
+  #storeHeader #brandHomeLink .brand-copy > span:first-child { font-size: 15px; }
+  #storeHeader #brandHomeLink .brand-copy > span:last-child { display: none; }
+  #storeHeader .mobile-search-toggle { display: none !important; }
+  #storeHeader #desktopSearchWrap {
+    display: flex !important;
+    min-width: 180px;
+    max-width: 300px;
+    margin: 0;
+  }
+  #storeHeader nav[aria-label="Categorías"] {
+    display: flex !important;
+    justify-content: flex-start;
+    gap: 4px;
+    overflow-x: auto;
+    padding: 6px 0;
+    scrollbar-width: none;
+  }
+  #storeHeader nav[aria-label="Categorías"]::-webkit-scrollbar { display: none; }
+  #storeHeader .category-tab-btn { flex: none; padding-inline: 10px; font-size: 10px; }
+  #storeHeader.is-compact { position: fixed; inset: 0 0 auto; width: 100%; }
+  #storeHeader.is-compact .header-inner {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) 44px auto;
+    grid-template-rows: 64px;
+    align-items: center;
+    column-gap: 8px;
+  }
+  #storeHeader.is-compact #headerMainRow { display: contents; }
+  #storeHeader.is-compact #brandHomeLink { grid-column: 1; grid-row: 1; gap: 0; }
+  #storeHeader.is-compact #brandHomeLink .brand-copy { display: none; }
+  #storeHeader.is-compact #brandHomeLink .brand-logo-frame {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
+  }
+  #storeHeader.is-compact #desktopSearchWrap {
+    display: flex !important;
+    grid-column: 3;
+    grid-row: 1;
+    width: 44px;
+    min-width: 44px;
+  }
+  #storeHeader.is-compact #desktopSearchWrap > .relative { display: none; }
+  #storeHeader.is-compact #desktopSearchWrap .compact-search-toggle { display: inline-flex; }
+  #storeHeader.is-compact #headerActions { grid-column: 4; grid-row: 1; }
+  #storeHeader.is-compact nav[aria-label="Categorías"] {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-category-card,
+  .mobile-category-back,
+  .mobile-perfume-segment { transform: none !important; transition-duration: .01ms !important; }
 }
