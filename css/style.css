@@ -1132,7 +1132,11 @@ input[type="checkbox"] { border-radius: var(--ui-radius-pill); }
 
 /* Header de tienda: un mismo logo y controles pasan a una barra compacta. */
 #storeHeader {
-  transition: box-shadow 240ms ease, background-color 240ms ease;
+  transition: background-color 160ms ease;
+}
+.store-header-spacer {
+  height: 0;
+  pointer-events: none;
 }
 #storeHeader .brand-logo-frame {
   width: 68px !important;
@@ -1191,7 +1195,11 @@ input[type="checkbox"] { border-radius: var(--ui-radius-pill); }
 #storeHeader.is-search-open .brand-copy { opacity: 1; transform: none; pointer-events: auto; }
 
 @media (min-width: 1024px) {
-  #storeHeader.is-compact { position: fixed; inset: 0 0 auto; width: 100%; }
+  #storeHeader.is-compact {
+    position: fixed;
+    inset: 0 0 auto;
+    width: 100%;
+  }
   #storeHeader.is-compact .header-inner {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) 44px auto;
