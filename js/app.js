@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const storeHeader = document.getElementById("storeHeader");
   const storeHeaderSpacer = document.getElementById("storeHeaderSpacer");
   const announcementBar = document.querySelector(".announcement-bar");
-  const desktopHeaderQuery = window.matchMedia("(min-width: 1024px)");
+  const desktopHeaderQuery = window.matchMedia("(min-width: 640px) and (any-hover: hover) and (any-pointer: fine)");
   const compactSearchToggles = document.querySelectorAll(".compact-search-toggle");
   const desktopSearchInput = document.getElementById("searchInput");
   const mobileSearchInput = document.getElementById("searchInputMobile");
@@ -94,8 +94,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const announcementHeight = announcementBar?.getBoundingClientRect().height || 0;
     const isCompact = storeHeader?.classList.contains("is-compact");
-    const compactAfter = Math.max(64, announcementHeight + 24);
-    const expandBefore = 24;
+    const compactAfter = Math.max(96, announcementHeight + 64);
+    const expandBefore = 48;
     setCompactHeader(isCompact ? window.scrollY > expandBefore : window.scrollY > compactAfter);
   };
 
@@ -238,7 +238,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const mobileCategoryTitle = document.getElementById("mobileCategoryTitle");
   const mobileCategoryCount = document.getElementById("mobileCategoryCount");
   const mobilePerfumeSegmentFilters = document.getElementById("mobilePerfumeSegmentFilters");
-  const mobileCatalogTransition = document.getElementById("mobileCatalogTransition");
   const mobileCategoryGroups = new Map();
   const brandSelect = document.getElementById("brandSelect");
   const saleOnlyCheckbox = document.getElementById("saleOnlyCheckbox");
@@ -246,7 +245,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const renderDesktopCategoryTabs = () => {
     if (!categoryNav) return;
-    const pinnedCategories = ["Perfumes", "Calzado", "Ropa", "Accesorios", "Lentes", "Otros"];
+    const pinnedCategories = ["Perfumes", "Calzado", "Ropa", "Accesorios"];
     const seen = new Set();
     const categories = [...pinnedCategories, ...state.products.map((product) => String(product.category || "Otros").trim())]
       .filter((category) => {
@@ -264,7 +263,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (/accesorio/.test(key)) return "fa-bag-shopping";
       return "fa-box-open";
     };
-    categoryNav.innerHTML = `<button aria-pressed="${state.selectedCategory === "all"}" class="category-tab-btn${state.selectedCategory === "all" ? " active font-black text-neutral-950" : " text-neutral-500"} min-h-[44px] px-3.5 py-2 transition-colors" data-category="all">TODOS</button>${categories.map((category) => `<button aria-pressed="${state.selectedCategory === category}" class="category-tab-btn${state.selectedCategory === category ? " active font-black text-neutral-950" : " text-neutral-500"} min-h-[44px] px-3.5 py-2 transition-colors" data-category="${escapeHtml(category)}"><i class="fa-solid ${iconFor(category)} mr-1" aria-hidden="true"></i> ${escapeHtml(category.toLocaleUpperCase("es-MX"))}</button>`).join("")}<button aria-pressed="${state.selectedCategory === "ofertas"}" class="category-tab-btn${state.selectedCategory === "ofertas" ? " active font-black text-neutral-950" : " text-red-700"} min-h-[44px] px-3.5 py-2 transition-colors" data-category="ofertas"><i class="fa-solid fa-fire mr-1" aria-hidden="true"></i> OFERTAS</button><span class="category-active-indicator" aria-hidden="true"></span>`;
+    categoryNav.innerHTML = `<button aria-pressed="${state.selectedCategory === "all"}" class="category-tab-btn${state.selectedCategory === "all" ? " active font-black text-neutral-950" : " text-neutral-500"} min-h-[44px] px-3.5 py-2 transition-colors" data-category="all">TODOS</button>${categories.map((category) => {
+      const label = normalizeCategoryKey(category) === "accesorios" ? "ACCESORIOS & LENTES" : category.toLocaleUpperCase("es-MX");
+      return `<button aria-pressed="${state.selectedCategory === category}" class="category-tab-btn${state.selectedCategory === category ? " active font-black text-neutral-950" : " text-neutral-500"} min-h-[44px] px-3.5 py-2 transition-colors" data-category="${escapeHtml(category)}"><i class="fa-solid ${iconFor(category)} mr-1" aria-hidden="true"></i> ${escapeHtml(label)}</button>`;
+    }).join("")}<button aria-pressed="${state.selectedCategory === "ofertas"}" class="category-tab-btn${state.selectedCategory === "ofertas" ? " active font-black text-neutral-950" : " text-red-700"} min-h-[44px] px-3.5 py-2 transition-colors" data-category="ofertas"><i class="fa-solid fa-fire mr-1" aria-hidden="true"></i> OFERTAS</button><span class="category-active-indicator" aria-hidden="true"></span>`;
     categoryIndicator = categoryNav.querySelector(".category-active-indicator");
     moveCategoryIndicator(false);
   };
@@ -422,6 +424,7 @@ document.addEventListener("DOMContentLoaded", () => {
       renderMobilePerfumeAudienceCards();
       return;
     }
+    mobileCategoryGrid.classList.remove("is-audience-grid");
     if (mobileCategoryHeading) mobileCategoryHeading.textContent = "Explora categorías";
     if (mobileCategoryDescription) {
       mobileCategoryDescription.hidden = true;
@@ -451,6 +454,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const renderMobilePerfumeAudienceCards = () => {
     if (!mobileCategoryGrid) return;
+    mobileCategoryGrid.classList.add("is-audience-grid");
     const audiences = [
       { value: "Hombre", label: "Hombre" },
       { value: "Mujer", label: "Mujer" }
@@ -487,8 +491,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const applyFilters = () => {
     let result = [...state.products];
 
-    // La vista móvil agrupa por categoría y, en accesorios, separa lentes/pulseras.
-    if (state.mobileCategoryGroupId && window.matchMedia("(max-width: 767px)").matches) {
+    // La navegación por tarjetas comparte el mismo estado en móvil y escritorio.
+    if (state.mobileCategoryGroupId) {
       result = result.filter((product) => getMobileCategoryGroup(product).id === state.mobileCategoryGroupId);
     // Filtro por categoría
     } else if (state.selectedCategory !== "all") {
@@ -504,7 +508,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    if (state.mobilePerfumeAudience && window.matchMedia("(max-width: 767px)").matches) {
+    if (state.mobilePerfumeAudience) {
       const selectedAudience = normalizeCategoryKey(state.mobilePerfumeAudience);
       result = result.filter((product) =>
         normalizeCategoryKey(product.category) === "perfumes"
@@ -512,7 +516,7 @@ document.addEventListener("DOMContentLoaded", () => {
       );
     }
 
-    if (state.mobilePerfumeAudience && state.mobilePerfumeSegment !== "all" && window.matchMedia("(max-width: 767px)").matches) {
+    if (state.mobilePerfumeAudience && state.mobilePerfumeSegment !== "all") {
       result = result.filter((product) => getPerfumeMarketSegment(product) === state.mobilePerfumeSegment);
     }
 
@@ -884,7 +888,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (searchInputMobile) searchInputMobile.value = "";
       brandSelect.value = "all";
       saleOnlyCheckbox.checked = false;
-      updateCategoryControls("all");
+      updateCategoryControls(group.category);
       closeMobileSearch();
       showMobileCategoryHome();
       renderMobilePerfumeAudienceCards();
@@ -934,42 +938,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let mobileCatalogTransitionVersion = 0;
   let mobileCatalogTransitionAnimations = [];
-  const runMobileCatalogTransition = async (updateView) => {
-    if (!mobileCatalogTransition || !catalogSection || !window.matchMedia("(max-width: 767px)").matches) {
+  const runMobileCatalogTransition = async (updateView, shouldAnimate = true) => {
+    if (!catalogSection || reducedMotionQuery.matches || !shouldAnimate) {
       updateView();
       return;
     }
 
     const version = ++mobileCatalogTransitionVersion;
-    const overlayOpacity = mobileCatalogTransition.hidden
-      ? 0
-      : Number.parseFloat(getComputedStyle(mobileCatalogTransition).opacity) || 0;
     const contentOpacity = Number.parseFloat(getComputedStyle(catalogSection).opacity) || 1;
     mobileCatalogTransitionAnimations.forEach((animation) => animation.cancel());
     mobileCatalogTransitionAnimations = [];
-    mobileCatalogTransition.hidden = false;
-
-    const reducedMotion = reducedMotionQuery.matches;
-    const coveredContentOpacity = reducedMotion ? 0.86 : 0.78;
+    const coveredContentOpacity = 0.88;
 
     try {
-      const coverAnimation = mobileCatalogTransition.animate(
-        [{ opacity: overlayOpacity }, { opacity: 1 }],
-        {
-          duration: reducedMotion ? 90 : 120,
-          easing: "cubic-bezier(0.23, 1, 0.32, 1)",
-          fill: "forwards"
-        }
-      );
       const softenAnimation = catalogSection.animate(
         [{ opacity: contentOpacity }, { opacity: coveredContentOpacity }],
         {
-          duration: reducedMotion ? 90 : 120,
+          duration: 100,
           easing: "cubic-bezier(0.23, 1, 0.32, 1)",
           fill: "forwards"
         }
       );
-      mobileCatalogTransitionAnimations = [coverAnimation, softenAnimation];
+      mobileCatalogTransitionAnimations = [softenAnimation];
       await Promise.all(mobileCatalogTransitionAnimations.map((animation) => animation.finished.catch(() => {})));
       if (version !== mobileCatalogTransitionVersion) return;
 
@@ -977,61 +967,52 @@ document.addEventListener("DOMContentLoaded", () => {
       await new Promise((resolve) => requestAnimationFrame(resolve));
       if (version !== mobileCatalogTransitionVersion) return;
 
-      const revealAnimation = mobileCatalogTransition.animate(
-        [{ opacity: 1 }, { opacity: 0 }],
-        {
-          duration: reducedMotion ? 110 : 150,
-          easing: "cubic-bezier(0.23, 1, 0.32, 1)",
-          fill: "forwards"
-        }
-      );
       const clarifyAnimation = catalogSection.animate(
         [{ opacity: coveredContentOpacity }, { opacity: 1 }],
         {
-          duration: reducedMotion ? 110 : 150,
+          duration: 150,
           easing: "cubic-bezier(0.23, 1, 0.32, 1)",
           fill: "forwards"
         }
       );
-      mobileCatalogTransitionAnimations = [revealAnimation, clarifyAnimation];
+      mobileCatalogTransitionAnimations = [clarifyAnimation];
       await Promise.all(mobileCatalogTransitionAnimations.map((animation) => animation.finished.catch(() => {})));
     } finally {
       if (version === mobileCatalogTransitionVersion) {
         mobileCatalogTransitionAnimations = [];
-        mobileCatalogTransition.hidden = true;
-        mobileCatalogTransition.style.removeProperty("opacity");
         catalogSection.style.removeProperty("opacity");
       }
     }
   };
 
   mobileCategoryGrid?.addEventListener("click", (event) => {
+    const shouldAnimate = event.detail > 0;
     const audienceCard = event.target.closest("[data-mobile-audience]");
     if (audienceCard) {
       void runMobileCatalogTransition(() => {
         openMobilePerfumeAudience(audienceCard.getAttribute("data-mobile-audience"));
-      });
+      }, shouldAnimate);
       return;
     }
     const card = event.target.closest("[data-mobile-category]");
     if (card) {
       void runMobileCatalogTransition(() => {
         openMobileCategory(card.getAttribute("data-mobile-category"));
-      });
+      }, shouldAnimate);
     }
   });
 
-  mobileCategoryHomeBack?.addEventListener("click", () => {
+  mobileCategoryHomeBack?.addEventListener("click", (event) => {
     void runMobileCatalogTransition(() => {
       state.mobileCategoryStep = "categories";
       state.mobilePerfumeAudience = "";
       state.mobilePerfumeSegment = "all";
       renderMobileCategoryCards();
       showMobileCategoryHome();
-    });
+    }, event.detail > 0);
   });
 
-  mobileCategoryBack?.addEventListener("click", () => {
+  mobileCategoryBack?.addEventListener("click", (event) => {
     void runMobileCatalogTransition(() => {
       const returnToAudiences = Boolean(state.mobilePerfumeAudience);
       state.mobileCategoryGroupId = null;
@@ -1052,7 +1033,7 @@ document.addEventListener("DOMContentLoaded", () => {
       closeMobileSearch();
       applyFilters();
       mobileCategoryHome?.scrollIntoView({ behavior: prefersReducedMotion ? "instant" : "smooth", block: "start" });
-    });
+    }, event.detail > 0);
   });
 
   // 4. Modal de Detalle Interactivo con animación suave Anime.js
@@ -1666,8 +1647,39 @@ ${itemsText}
   };
 
   const changeCategory = (category, scrollBehavior) => {
-    scrollToCatalog(scrollBehavior);
-    setCategory(category);
+    const normalizedCategory = normalizeCategoryKey(category);
+    if (category === "all") {
+      state.mobileCategoryGroupId = null;
+      state.mobileCategoryStep = "categories";
+      state.mobilePerfumeAudience = "";
+      state.mobilePerfumeSegment = "all";
+      state.selectedCategory = "all";
+      state.selectedBrand = "all";
+      state.onlySale = false;
+      state.searchQuery = "";
+      if (searchInput) searchInput.value = "";
+      if (searchInputMobile) searchInputMobile.value = "";
+      if (brandSelect) brandSelect.value = "all";
+      if (saleOnlyCheckbox) saleOnlyCheckbox.checked = false;
+      renderMobileCategoryCards();
+      showMobileCategoryHome();
+      updateCategoryControls("all");
+      applyFilters();
+    } else if (category === "ofertas") {
+      setCategory(category);
+      showMobileProductList("Ofertas");
+    } else {
+      const group = [...mobileCategoryGroups.values()].find((candidate) =>
+        normalizeCategoryKey(candidate.label) === normalizedCategory
+        || (normalizeCategoryKey(candidate.category) === normalizedCategory && !candidate.type)
+      );
+      if (group) openMobileCategory(group.id);
+      else {
+        setCategory(category);
+        showMobileProductList(category);
+      }
+    }
+    requestAnimationFrame(() => scrollToCatalog(scrollBehavior));
   };
 
   categoryNav?.addEventListener("click", (event) => {
@@ -1718,7 +1730,7 @@ ${itemsText}
     state.searchQuery = val;
     if (searchInput) searchInput.value = val;
     if (searchInputMobile) searchInputMobile.value = val;
-    if (window.matchMedia("(max-width: 767px)").matches && !state.mobileCategoryGroupId) {
+    if (!state.mobileCategoryGroupId) {
       if (val.trim()) showMobileProductList("Resultados");
       else showMobileCategoryHome();
     }
@@ -1760,6 +1772,7 @@ ${itemsText}
     saleOnlyCheckbox.checked = false;
     if (mobileFilterToggle) mobileFilterToggle.setAttribute("aria-expanded", "false");
     catalogControls?.classList.remove("filters-open");
+    renderMobileCategoryCards();
     showMobileCategoryHome();
 
     updateCategoryControls("all");
