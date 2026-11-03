@@ -12,6 +12,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   const prefersReducedMotion = reducedMotionQuery.matches;
   const storeHeader = document.getElementById("storeHeader");
+  const storeHeaderSpacer = document.getElementById("storeHeaderSpacer");
+  const announcementBar = document.querySelector(".announcement-bar");
+  const desktopHeaderQuery = window.matchMedia("(min-width: 1024px)");
   const compactSearchToggles = document.querySelectorAll(".compact-search-toggle");
   const desktopSearchInput = document.getElementById("searchInput");
   const mobileSearchInput = document.getElementById("searchInputMobile");
@@ -67,8 +70,47 @@ document.addEventListener("DOMContentLoaded", () => {
     moveCategoryIndicator(false);
   });
 
-  // La cabecera ya es sticky por CSS. Mantener su geometría estable evita el
-  // salto de layout que antes ocurría durante el primer gesto de desplazamiento.
+  let compactHeaderFrame = 0;
+  const setCompactHeader = (compact) => {
+    if (!storeHeader || !storeHeaderSpacer || storeHeader.classList.contains("is-compact") === compact) return;
+
+    if (compact) {
+      storeHeaderSpacer.style.height = `${storeHeader.getBoundingClientRect().height}px`;
+      storeHeader.classList.add("is-compact");
+    } else {
+      storeHeader.classList.remove("is-compact");
+      storeHeaderSpacer.style.height = "0px";
+    }
+
+    requestAnimationFrame(() => moveCategoryIndicator(false));
+  };
+
+  const updateCompactHeader = () => {
+    compactHeaderFrame = 0;
+    if (!desktopHeaderQuery.matches) {
+      setCompactHeader(false);
+      return;
+    }
+
+    const announcementHeight = announcementBar?.getBoundingClientRect().height || 0;
+    const isCompact = storeHeader?.classList.contains("is-compact");
+    const compactAfter = Math.max(64, announcementHeight + 24);
+    const expandBefore = 24;
+    setCompactHeader(isCompact ? window.scrollY > expandBefore : window.scrollY > compactAfter);
+  };
+
+  const scheduleCompactHeaderUpdate = () => {
+    if (compactHeaderFrame) return;
+    compactHeaderFrame = requestAnimationFrame(updateCompactHeader);
+  };
+
+  window.addEventListener("scroll", scheduleCompactHeaderUpdate, { passive: true });
+  desktopHeaderQuery.addEventListener("change", scheduleCompactHeaderUpdate);
+  window.addEventListener("resize", scheduleCompactHeaderUpdate, { passive: true });
+
+  // La altura expandida se conserva en el flujo al fijar la barra compacta;
+  // así el primer gesto de desplazamiento no mueve el contenido del catálogo.
+  updateCompactHeader();
   moveCategoryIndicator(false);
 
   compactSearchToggles.forEach((button) => {
