@@ -7,9 +7,19 @@ adminOverlay.setAttribute("aria-hidden", "true");
 adminOverlay.innerHTML = `
   <section class="admin-panel" role="dialog" aria-modal="true" aria-labelledby="adminTitle" tabindex="-1">
     <header class="admin-header">
-      <a class="admin-brand" href="#" aria-label="Diversas Marcas, administración"><img src="/assets/logo.png" alt="" /><span>Diversas Marcas</span></a>
-      <nav class="admin-nav" aria-label="Navegación de administración"><a href="#adminWorkspace" id="adminProductsLink">Productos</a><a href="#adminCategoryCovers" id="adminCategoryCoversLink">Portadas</a><button class="admin-nav-add" type="button" id="adminNavAdd">Agregar producto</button></nav>
+      <a class="admin-brand" href="#" aria-label="Diversas Marcas, administración"><img src="/assets/logo.png" alt="" /><span><strong>Diversas Marcas</strong><small>Administración</small></span></a>
+      <nav class="admin-nav" aria-label="Categorías del inventario">
+        <button type="button" class="admin-nav-category is-active" data-admin-nav="all" aria-pressed="true">Todos</button>
+        <button type="button" class="admin-nav-category" data-admin-nav="perfumes" aria-pressed="false"><i class="fa-solid fa-spray-can-sparkles" aria-hidden="true"></i>Perfumes</button>
+        <button type="button" class="admin-nav-category" data-admin-nav="calzado" aria-pressed="false"><i class="fa-solid fa-shoe-prints" aria-hidden="true"></i>Calzado</button>
+        <button type="button" class="admin-nav-category" data-admin-nav="ropa" aria-pressed="false"><i class="fa-solid fa-shirt" aria-hidden="true"></i>Ropa</button>
+        <button type="button" class="admin-nav-category" data-admin-nav="lentes" aria-pressed="false"><i class="fa-solid fa-glasses" aria-hidden="true"></i>Lentes</button>
+        <button type="button" class="admin-nav-category" data-admin-nav="accesorios" aria-pressed="false"><i class="fa-solid fa-bag-shopping" aria-hidden="true"></i>Accesorios</button>
+        <button type="button" class="admin-nav-category admin-nav-sale" data-admin-nav="ofertas" aria-pressed="false"><i class="fa-solid fa-tag" aria-hidden="true"></i>Ofertas</button>
+      </nav>
       <div class="admin-header-actions">
+        <button class="admin-button admin-button-quiet admin-covers-button" type="button" id="adminCategoryCoversLink" hidden><i class="fa-regular fa-image" aria-hidden="true"></i><span>Portadas</span></button>
+        <button class="admin-nav-add" type="button" id="adminNavAdd" hidden><i class="fa-solid fa-plus" aria-hidden="true"></i><span>Agregar</span></button>
         <button class="admin-button admin-button-quiet" type="button" id="adminLogout" hidden>Cerrar sesión</button>
         <button class="admin-close" type="button" id="adminClose" aria-label="Cerrar administración">×</button>
       </div>
@@ -34,12 +44,28 @@ adminOverlay.innerHTML = `
     <div class="admin-workspace" id="adminWorkspace" hidden>
       <section class="admin-products-section" aria-labelledby="adminProductsTitle">
         <div class="admin-section-heading">
-          <div><p class="admin-eyebrow">Inventario</p><h2 id="adminProductsTitle">Productos<br />del catálogo</h2><p class="admin-summary" id="adminProductCount"></p></div>
+          <div><p class="admin-eyebrow">Inventario</p><h2 id="adminProductsTitle">Administra tu catálogo</h2><p class="admin-summary" id="adminProductCount"></p></div>
           <button class="admin-button admin-button-primary" type="button" id="adminAddProduct"><span aria-hidden="true">+</span> Agregar producto</button>
         </div>
-        <p class="admin-list-intro">Busca por nombre, marca o categoría. Puedes ocultar un producto sin eliminarlo y volver a publicarlo cuando tengas existencias.</p>
-        <label class="sr-only" for="adminSearch">Buscar productos para administrar</label>
-        <input id="adminSearch" class="admin-input admin-search" type="search" placeholder="Buscar productos" />
+        <div class="admin-catalog-toolbar">
+          <label class="admin-catalog-search" for="adminSearch"><span class="sr-only">Buscar productos para administrar</span><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input id="adminSearch" class="admin-input admin-search" type="search" placeholder="Buscar por nombre, marca o categoría" /></label>
+          <div class="admin-visibility-filters" role="group" aria-label="Filtrar por visibilidad">
+            <button type="button" data-admin-visibility="all" aria-pressed="true">Todos</button>
+            <button type="button" data-admin-visibility="visible" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i>Visibles</button>
+            <button type="button" data-admin-visibility="hidden" aria-pressed="false"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i>Ocultos</button>
+          </div>
+        </div>
+        <section class="admin-catalog-navigation" id="adminCatalogNavigation" aria-labelledby="adminCatalogTitle">
+          <header class="admin-catalog-view-header">
+            <button class="admin-catalog-back" id="adminCatalogBack" type="button" aria-label="Volver" hidden><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></button>
+            <div><p class="admin-catalog-kicker" id="adminCatalogKicker">Catálogo</p><h3 id="adminCatalogTitle">Explora categorías</h3><p id="adminCatalogDescription">Selecciona una sección para administrar sus productos.</p></div>
+          </header>
+          <div class="admin-perfume-segments" id="adminPerfumeSegments" role="group" aria-label="Tipo de perfume" hidden>
+            <button type="button" data-admin-segment="Diseñador" aria-pressed="false"><i class="fa-solid fa-gem" aria-hidden="true"></i>Diseñador</button>
+            <button type="button" data-admin-segment="Árabe" aria-pressed="false"><i class="fa-solid fa-moon" aria-hidden="true"></i>Árabes</button>
+          </div>
+          <div class="admin-category-grid-view" id="adminCategoryGridView"></div>
+        </section>
         <div class="admin-product-list" id="adminProductList" data-reveal="media"></div>
       </section>
       <section class="admin-category-covers" id="adminCategoryCovers" aria-labelledby="adminCategoryCoversTitle" data-reveal="slide">
@@ -136,6 +162,13 @@ const loginForm = $("#adminLoginForm");
 const adminWorkspace = $("#adminWorkspace");
 const adminMessage = $("#adminMessage");
 const productList = $("#adminProductList");
+const adminCategoryGridView = $("#adminCategoryGridView");
+const adminCatalogNavigation = $("#adminCatalogNavigation");
+const adminCatalogBack = $("#adminCatalogBack");
+const adminCatalogTitle = $("#adminCatalogTitle");
+const adminCatalogKicker = $("#adminCatalogKicker");
+const adminCatalogDescription = $("#adminCatalogDescription");
+const adminPerfumeSegments = $("#adminPerfumeSegments");
 const productDialog = $("#adminProductDialog");
 const categoryDialog = $("#adminCategoryDialog");
 const categoryChoices = $("#adminCategoryChoices");
@@ -156,6 +189,13 @@ const categoryCoverObjectUrls = new Map();
 const categoryCoverBusy = new Set();
 let fragranceFamilyCache = [];
 let pendingDeleteId = null;
+const adminCatalogState = {
+  step: "categories",
+  groupId: "",
+  audience: "",
+  segment: "all",
+  visibility: "all"
+};
 let imageEntries = [];
 let editingId = null;
 let categoryDrafts = {};
@@ -224,6 +264,8 @@ const openAdmin = async () => {
   loginForm.hidden = false;
   adminWorkspace.hidden = true;
   adminNav.hidden = true;
+  $("#adminCategoryCoversLink").hidden = true;
+  $("#adminNavAdd").hidden = true;
   $("#adminLogout").hidden = true;
 
   try {
@@ -249,7 +291,15 @@ const showWorkspace = async () => {
   loginForm.hidden = true;
   adminWorkspace.hidden = false;
   adminNav.hidden = false;
+  $("#adminCategoryCoversLink").hidden = false;
+  $("#adminNavAdd").hidden = false;
   $("#adminLogout").hidden = false;
+  adminCatalogState.step = "categories";
+  adminCatalogState.groupId = "";
+  adminCatalogState.audience = "";
+  adminCatalogState.segment = "all";
+  adminCatalogState.visibility = "all";
+  $(".admin-visibility-filters").querySelectorAll("[data-admin-visibility]").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.adminVisibility === "all")));
   await refreshProducts();
   $("#adminSearch").focus();
   cleanupReferenceReveals?.();
@@ -280,58 +330,178 @@ const productAdminSection = (product) => {
   return `custom:${category}`;
 };
 
+const getAdminCatalogGroup = (product) => {
+  const section = productAdminSection(product);
+  const labels = {
+    perfumes: "Perfumes",
+    calzado: "Calzado",
+    lentes: "Lentes",
+    ropa: "Ropa",
+    accesorios: "Accesorios",
+    otros: "Otros productos"
+  };
+  return {
+    id: section,
+    label: section.startsWith("custom:") ? String(product.category || "Otros") : labels[section] || String(product.category || "Otros")
+  };
+};
+
+const getAdminPerfumeSegment = (product) => {
+  const saved = String(product?.details?.marketSegment || "").trim();
+  if (["Diseñador", "Árabe"].includes(saved)) return saved;
+  const signature = normalizeCategoryText(`${product?.brand || ""} ${product?.name || ""}`);
+  return /afnan|afan|armaf|lattafa|rasasi|hawas|odyssey/.test(signature) ? "Árabe" : "Diseñador";
+};
+
+const adminVisibilityMatch = (product) => {
+  if (adminCatalogState.visibility === "visible") return product.visible !== false;
+  if (adminCatalogState.visibility === "hidden") return product.visible === false;
+  return true;
+};
+
+const buildAdminCatalogGroups = (products = productCache) => {
+  const groups = new Map();
+  products.forEach((product) => {
+    const group = getAdminCatalogGroup(product);
+    if (!groups.has(group.id)) groups.set(group.id, { ...group, products: [] });
+    groups.get(group.id).products.push(product);
+  });
+  const priority = { perfumes: 0, calzado: 1, ropa: 2, lentes: 3, accesorios: 4, otros: 8 };
+  const result = [...groups.values()].sort((a, b) => (priority[a.id] ?? 6) - (priority[b.id] ?? 6) || a.label.localeCompare(b.label, "es-MX"));
+  const offers = products.filter((product) => product.onSale);
+  if (offers.length) result.push({ id: "ofertas", label: "Ofertas", products: offers });
+  return result;
+};
+
+const adminRepresentativeImage = (products, coverLabel = "") => {
+  const representative = products.find((product) => product.featured && product.images?.length)
+    || products.find((product) => product.images?.length)
+    || products[0];
+  const cover = categoryCoversCache[normalizeCategoryText(coverLabel)];
+  return cover || (representative ? productImagePath(representative) : "") || "/assets/logo.png";
+};
+
+const updateAdminNavState = (active = "all") => {
+  adminNav.querySelectorAll("[data-admin-nav]").forEach((button) => {
+    const selected = button.dataset.adminNav === active;
+    button.classList.toggle("is-active", selected);
+    button.setAttribute("aria-pressed", String(selected));
+  });
+};
+
+const renderAdminCategoryHome = (products) => {
+  const groups = buildAdminCatalogGroups(products);
+  adminCatalogKicker.textContent = "Catálogo";
+  adminCatalogTitle.textContent = "Explora categorías";
+  adminCatalogDescription.textContent = "Selecciona una sección para administrar sus productos.";
+  adminCatalogBack.hidden = true;
+  adminPerfumeSegments.hidden = true;
+  adminCategoryGridView.classList.remove("is-audience-grid");
+  adminCategoryGridView.hidden = false;
+  productList.hidden = true;
+  updateAdminNavState("all");
+  adminCategoryGridView.innerHTML = groups.length ? groups.map((group) => `
+    <button type="button" class="admin-catalog-category-card" data-admin-category="${escapeHtml(group.id)}" aria-label="Abrir categoría ${escapeHtml(group.label)}">
+      <span class="admin-catalog-category-image"><img src="${escapeHtml(adminRepresentativeImage(group.products, group.label))}" alt="" loading="lazy" /></span>
+      <span class="admin-catalog-category-label"><span><strong>${escapeHtml(group.label)}</strong><small>${group.products.length} ${group.products.length === 1 ? "producto" : "productos"}</small></span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></span>
+    </button>`).join("") : `<p class="admin-empty">No hay productos para este estado de visibilidad.</p>`;
+};
+
+const renderAdminPerfumeAudiences = (products) => {
+  const perfumes = products.filter((product) => getAdminCatalogGroup(product).id === "perfumes");
+  adminCatalogKicker.textContent = "Perfumes";
+  adminCatalogTitle.textContent = "Elige una sección";
+  adminCatalogDescription.textContent = "Administra las fragancias para hombre o mujer.";
+  adminCatalogBack.hidden = false;
+  adminPerfumeSegments.hidden = true;
+  adminCategoryGridView.classList.add("is-audience-grid");
+  adminCategoryGridView.hidden = false;
+  productList.hidden = true;
+  updateAdminNavState("perfumes");
+  adminCategoryGridView.innerHTML = ["Hombre", "Mujer"].map((audience) => {
+    const audienceKey = normalizeCategoryText(audience);
+    const matches = perfumes.filter((product) => [audienceKey, "unisex"].includes(normalizeCategoryText(product.gender)));
+    return `
+      <button type="button" class="admin-catalog-category-card" data-admin-audience="${audience}" aria-label="Ver perfumes para ${audience.toLocaleLowerCase("es-MX")}">
+        <span class="admin-catalog-category-image"><img src="${escapeHtml(adminRepresentativeImage(matches.length ? matches : perfumes))}" alt="" loading="lazy" /></span>
+        <span class="admin-catalog-category-label"><span><strong>${audience}</strong><small>${matches.length} ${matches.length === 1 ? "producto" : "productos"}</small></span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></span>
+      </button>`;
+  }).join("");
+};
+
 const renderProducts = (query = "") => {
   const normalizedQuery = query.trim().toLocaleLowerCase("es-MX");
-  const visibleProducts = productCache.filter((product) =>
-    [product.name, product.brand, product.category].some((value) => String(value).toLocaleLowerCase("es-MX").includes(normalizedQuery))
-  );
   const publicCount = productCache.filter((product) => product.visible !== false).length;
   const hiddenCount = productCache.length - publicCount;
   $("#adminProductCount").textContent = `${productCache.length} productos · ${publicCount} visibles · ${hiddenCount} ${hiddenCount === 1 ? "oculto" : "ocultos"}`;
-  if (visibleProducts.length === 0) {
-    productList.innerHTML = `<p class="admin-empty">No hay productos que coincidan con esa búsqueda.</p>`;
+  const stateProducts = productCache.filter(adminVisibilityMatch);
+
+  if (!normalizedQuery && adminCatalogState.step === "categories") {
+    renderAdminCategoryHome(stateProducts);
     return;
   }
-  const sectionOrder = [
-    ["perfumes", "Perfumes"],
-    ["calzado", "Calzado"],
-    ["lentes", "Lentes"],
-    ["ropa", "Ropa"],
-    ["accesorios", "Accesorios"],
-    ["otros", "Otros productos"]
-  ];
-  const customSections = [...new Map(visibleProducts
-    .filter((product) => productAdminSection(product).startsWith("custom:"))
-    .map((product) => [normalizeCategoryText(product.category), product.category])).entries()]
-    .map(([key, title]) => [`custom:${key}`, title]);
-  sectionOrder.push(...customSections);
-  const sections = sectionOrder.map(([key, title]) => ({
-    key,
-    title,
-    products: visibleProducts.filter((product) => productAdminSection(product) === key)
-  })).filter((section) => section.products.length > 0);
+
+  if (!normalizedQuery && adminCatalogState.step === "audiences") {
+    renderAdminPerfumeAudiences(stateProducts);
+    return;
+  }
+
+  let filteredProducts = stateProducts.filter((product) =>
+    !normalizedQuery || [product.name, product.brand, product.category].some((value) => normalizeCategoryText(value).includes(normalizeCategoryText(normalizedQuery)))
+  );
+  if (!normalizedQuery) {
+    if (adminCatalogState.groupId === "ofertas") filteredProducts = filteredProducts.filter((product) => product.onSale);
+    else if (adminCatalogState.groupId) filteredProducts = filteredProducts.filter((product) => getAdminCatalogGroup(product).id === adminCatalogState.groupId);
+    if (adminCatalogState.audience) {
+      const audience = normalizeCategoryText(adminCatalogState.audience);
+      filteredProducts = filteredProducts.filter((product) => [audience, "unisex"].includes(normalizeCategoryText(product.gender)));
+    }
+    if (adminCatalogState.audience && adminCatalogState.segment !== "all") {
+      filteredProducts = filteredProducts.filter((product) => getAdminPerfumeSegment(product) === adminCatalogState.segment);
+    }
+  }
+
+  adminCategoryGridView.hidden = true;
+  productList.hidden = false;
+  adminCatalogBack.hidden = false;
+  if (normalizedQuery) {
+    adminCatalogKicker.textContent = "Búsqueda";
+    adminCatalogTitle.textContent = "Resultados";
+    adminCatalogDescription.textContent = `${filteredProducts.length} ${filteredProducts.length === 1 ? "producto encontrado" : "productos encontrados"}.`;
+    adminPerfumeSegments.hidden = true;
+    updateAdminNavState("all");
+  } else {
+    const groupLabel = adminCatalogState.groupId === "ofertas" ? "Ofertas" : (buildAdminCatalogGroups(productCache).find((group) => group.id === adminCatalogState.groupId)?.label || "Productos");
+    adminCatalogKicker.textContent = adminCatalogState.audience ? "Perfumes" : "Inventario";
+    adminCatalogTitle.textContent = adminCatalogState.audience ? `Perfumes para ${adminCatalogState.audience.toLocaleLowerCase("es-MX")}` : groupLabel;
+    adminCatalogDescription.textContent = `${filteredProducts.length} ${filteredProducts.length === 1 ? "producto" : "productos"} en esta sección.`;
+    adminPerfumeSegments.hidden = !adminCatalogState.audience;
+    adminPerfumeSegments.querySelectorAll("[data-admin-segment]").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.adminSegment === adminCatalogState.segment)));
+    updateAdminNavState(adminCatalogState.groupId || "all");
+  }
+
+  if (filteredProducts.length === 0) {
+    productList.innerHTML = `<p class="admin-empty">No hay productos que coincidan con esta vista.</p>`;
+    return;
+  }
 
   const renderProductCard = (product) => `
-    <article class="admin-product-row${product.visible === false ? " is-hidden" : ""}" data-product-id="${escapeHtml(product.id)}">
-      <div class="admin-product-image">${productImagePath(product) ? `<img src="${escapeHtml(productImagePath(product))}" alt="${escapeHtml(product.name)}" loading="lazy" />` : `<span aria-hidden="true">DM</span>`}</div>
-      <div class="admin-product-info"><span class="admin-visibility-status" data-visible="${product.visible !== false}"><i class="fa-solid ${product.visible === false ? "fa-eye-slash" : "fa-eye"}" aria-hidden="true"></i>${product.visible === false ? "Oculto" : "Visible"}</span><h3>${escapeHtml(product.name)}</h3><p>${escapeHtml(product.brand)} · ${escapeHtml(product.category)}</p><strong>${money(product.offerPrice)}</strong>${product.onSale && product.regularPrice > product.offerPrice ? `<span class="admin-sale-price"> Antes ${money(product.regularPrice)}</span>` : ""}</div>
+    <article class="admin-product-row admin-product-card${product.visible === false ? " is-hidden" : ""}" data-product-id="${escapeHtml(product.id)}">
+      <div class="admin-product-image">
+        ${productImagePath(product) ? `<img src="${escapeHtml(productImagePath(product))}" alt="${escapeHtml(product.name)}" loading="lazy" />` : `<span aria-hidden="true">DM</span>`}
+        <div class="admin-product-badges"><span class="admin-visibility-status" data-visible="${product.visible !== false}"><i class="fa-solid ${product.visible === false ? "fa-eye-slash" : "fa-eye"}" aria-hidden="true"></i>${product.visible === false ? "Oculto" : "Visible"}</span>${product.isNew ? `<span class="admin-product-badge">Nuevo</span>` : ""}${product.onSale ? `<span class="admin-product-badge is-sale">Oferta</span>` : ""}</div>
+      </div>
+      <div class="admin-product-info"><p class="admin-product-brand">${escapeHtml(product.brand)}</p><h3>${escapeHtml(product.name)}</h3><p class="admin-product-meta">${escapeHtml(product.category)}${product.gender ? ` · ${escapeHtml(product.gender)}` : ""}</p><strong>${money(product.offerPrice)}</strong>${product.onSale && product.regularPrice > product.offerPrice ? `<span class="admin-sale-price"> Antes ${money(product.regularPrice)}</span>` : ""}</div>
       ${pendingDeleteId === product.id ? `
         <div class="admin-delete-confirm" role="group" aria-label="Confirmar eliminación de ${escapeHtml(product.name)}">
           <p>¿Eliminar este producto del catálogo?</p>
           <button class="admin-button admin-button-danger" type="button" data-action="confirm-delete" data-id="${escapeHtml(product.id)}">Confirmar eliminación</button>
           <button class="admin-button admin-button-quiet" type="button" data-action="cancel-delete" data-id="${escapeHtml(product.id)}">Cancelar</button>
         </div>` : `
-        <div class="admin-row-actions"><button class="admin-button admin-visibility-toggle" type="button" data-action="toggle-visibility" data-id="${escapeHtml(product.id)}" aria-label="${product.visible === false ? "Mostrar" : "Ocultar"} ${escapeHtml(product.name)} en la tienda"><i class="fa-solid ${product.visible === false ? "fa-eye" : "fa-eye-slash"}" aria-hidden="true"></i>${product.visible === false ? "Mostrar" : "Ocultar"}</button><button class="admin-button admin-button-quiet" type="button" data-action="edit" data-id="${escapeHtml(product.id)}">Editar</button><button class="admin-button admin-button-danger" type="button" data-action="delete" data-id="${escapeHtml(product.id)}">Eliminar</button></div>`}
+        <div class="admin-row-actions"><button class="admin-button admin-button-primary" type="button" data-action="edit" data-id="${escapeHtml(product.id)}"><i class="fa-solid fa-pen" aria-hidden="true"></i>Editar</button><button class="admin-button admin-visibility-toggle" type="button" data-action="toggle-visibility" data-id="${escapeHtml(product.id)}" aria-label="${product.visible === false ? "Mostrar" : "Ocultar"} ${escapeHtml(product.name)} en la tienda"><i class="fa-solid ${product.visible === false ? "fa-eye" : "fa-eye-slash"}" aria-hidden="true"></i>${product.visible === false ? "Mostrar" : "Ocultar"}</button><button class="admin-button admin-button-danger" type="button" data-action="delete" data-id="${escapeHtml(product.id)}"><i class="fa-solid fa-trash-can" aria-hidden="true"></i>Eliminar</button></div>`}
     </article>`;
 
-  productList.innerHTML = sections.map((section, index) => `
-    <section class="admin-product-group" aria-labelledby="admin-product-group-${index}">
-      <header class="admin-product-group-heading">
-        <h3 id="admin-product-group-${index}">${escapeHtml(section.title)}</h3>
-        <span>${section.products.length} ${section.products.length === 1 ? "producto" : "productos"}</span>
-      </header>
-      <div class="admin-product-group-grid">${section.products.map(renderProductCard).join("")}</div>
-    </section>`).join("");
+  productList.innerHTML = filteredProducts.map(renderProductCard).join("");
 };
 
 const openProductForm = (product = null, selectedCategory = "") => {
@@ -905,7 +1075,81 @@ $("#adminNewCategoryForm").addEventListener("submit", async (event) => {
     button.disabled = false;
   }
 });
-$("#adminProductsLink").addEventListener("click", () => { $("#adminWorkspace").scrollIntoView({ behavior: "smooth" }); });
+const resetAdminCatalogSearch = () => { $("#adminSearch").value = ""; };
+const openAdminCatalogGroup = (groupId) => {
+  resetAdminCatalogSearch();
+  pendingDeleteId = null;
+  adminCatalogState.groupId = groupId;
+  adminCatalogState.audience = "";
+  adminCatalogState.segment = "all";
+  adminCatalogState.step = groupId === "perfumes" ? "audiences" : "products";
+  renderProducts();
+  $("#adminWorkspace").scrollIntoView({ behavior: "smooth", block: "start" });
+};
+const showAdminCatalogHome = () => {
+  resetAdminCatalogSearch();
+  pendingDeleteId = null;
+  adminCatalogState.step = "categories";
+  adminCatalogState.groupId = "";
+  adminCatalogState.audience = "";
+  adminCatalogState.segment = "all";
+  renderProducts();
+};
+
+adminNav.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-admin-nav]");
+  if (!button) return;
+  if (button.dataset.adminNav === "all") showAdminCatalogHome();
+  else openAdminCatalogGroup(button.dataset.adminNav);
+});
+adminCategoryGridView.addEventListener("click", (event) => {
+  const category = event.target.closest("[data-admin-category]");
+  if (category) {
+    openAdminCatalogGroup(category.dataset.adminCategory);
+    return;
+  }
+  const audience = event.target.closest("[data-admin-audience]");
+  if (!audience) return;
+  adminCatalogState.step = "products";
+  adminCatalogState.groupId = "perfumes";
+  adminCatalogState.audience = audience.dataset.adminAudience;
+  adminCatalogState.segment = "all";
+  renderProducts();
+});
+adminCatalogBack.addEventListener("click", () => {
+  if ($("#adminSearch").value) {
+    resetAdminCatalogSearch();
+    renderProducts();
+    return;
+  }
+  if (adminCatalogState.step === "products" && adminCatalogState.audience) {
+    adminCatalogState.step = "audiences";
+    adminCatalogState.audience = "";
+    adminCatalogState.segment = "all";
+    renderProducts();
+    return;
+  }
+  showAdminCatalogHome();
+});
+adminPerfumeSegments.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-admin-segment]");
+  if (!button) return;
+  adminCatalogState.segment = adminCatalogState.segment === button.dataset.adminSegment ? "all" : button.dataset.adminSegment;
+  pendingDeleteId = null;
+  renderProducts();
+});
+$(".admin-visibility-filters").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-admin-visibility]");
+  if (!button) return;
+  adminCatalogState.visibility = button.dataset.adminVisibility;
+  pendingDeleteId = null;
+  $(".admin-visibility-filters").querySelectorAll("[data-admin-visibility]").forEach((filterButton) => filterButton.setAttribute("aria-pressed", String(filterButton === button)));
+  renderProducts($("#adminSearch").value);
+});
+$(".admin-brand").addEventListener("click", (event) => {
+  event.preventDefault();
+  showAdminCatalogHome();
+});
 $("#adminCategoryCoversLink").addEventListener("click", (event) => {
   event.preventDefault();
   $("#adminCategoryCovers").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1094,6 +1338,8 @@ $("#adminLogout").addEventListener("click", async () => {
     loginForm.hidden = false;
     adminWorkspace.hidden = true;
     adminNav.hidden = true;
+    $("#adminCategoryCoversLink").hidden = true;
+    $("#adminNavAdd").hidden = true;
     $("#adminLogout").hidden = true;
     showMessage("Sesión cerrada.");
     $("#adminPassword").focus();
